@@ -1,0 +1,78 @@
+Date : 2025-10-11 13:44:30
+Directory : /Users/francis/Documents/code/project/paperSubSystem/src
+Total : 34 files,  4085 codes, 2 comments, 305 blanks, all 4392 lines
+
+Languages
++----------------+------------+------------+------------+------------+------------+
+| language       | files      | code       | comment    | blank      | total      |
++----------------+------------+------------+------------+------------+------------+
+| JavaScript JSX |         28 |      3,846 |          2 |        274 |      4,122 |
+| JavaScript     |          5 |        222 |          0 |         27 |        249 |
+| PostCSS        |          1 |         17 |          0 |          4 |         21 |
++----------------+------------+------------+------------+------------+------------+
+
+Directories
++--------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                                             | files      | code       | comment    | blank      | total      |
++--------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                                                |         34 |      4,085 |          2 |        305 |      4,392 |
+| . (Files)                                                                                        |          2 |         66 |          0 |          9 |         75 |
+| api                                                                                              |          2 |         95 |          0 |          8 |        103 |
+| components                                                                                       |          4 |        309 |          0 |         30 |        339 |
+| components (Files)                                                                               |          1 |         48 |          0 |          9 |         57 |
+| components/layout                                                                                |          3 |        261 |          0 |         21 |        282 |
+| features                                                                                         |          2 |        193 |          1 |         25 |        219 |
+| features/auth                                                                                    |          1 |        145 |          1 |         16 |        162 |
+| features/papers                                                                                  |          1 |         48 |          0 |          9 |         57 |
+| pages                                                                                            |         19 |      3,137 |          1 |        204 |      3,342 |
+| pages (Files)                                                                                    |          3 |        559 |          1 |         38 |        598 |
+| pages/author                                                                                     |          5 |        961 |          0 |         59 |      1,020 |
+| pages/editor                                                                                     |          5 |      1,064 |          0 |         64 |      1,128 |
+| pages/expert                                                                                     |          4 |        524 |          0 |         37 |        561 |
+| pages/status                                                                                     |          2 |         29 |          0 |          6 |         35 |
+| routes                                                                                           |          2 |        189 |          0 |         15 |        204 |
+| stores                                                                                           |          1 |         22 |          0 |          6 |         28 |
+| styles                                                                                           |          1 |         17 |          0 |          4 |         21 |
+| utils                                                                                            |          1 |         57 |          0 |          4 |         61 |
++--------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++--------------------------------------------------------------------------------------------------+----------------+------------+------------+------------+------------+
+| filename                                                                                         | language       | code       | comment    | blank      | total      |
++--------------------------------------------------------------------------------------------------+----------------+------------+------------+------------+------------+
+| /Users/francis/Documents/code/project/paperSubSystem/src/App.jsx                                 | JavaScript JSX |         26 |          0 |          6 |         32 |
+| /Users/francis/Documents/code/project/paperSubSystem/src/api/axios.js                            | JavaScript     |         54 |          0 |          7 |         61 |
+| /Users/francis/Documents/code/project/paperSubSystem/src/api/endpoints.js                        | JavaScript     |         41 |          0 |          1 |         42 |
+| /Users/francis/Documents/code/project/paperSubSystem/src/components/ThemeProvider.jsx            | JavaScript JSX |         48 |          0 |          9 |         57 |
+| /Users/francis/Documents/code/project/paperSubSystem/src/components/layout/AppLayout.jsx         | JavaScript JSX |         36 |          0 |          4 |         40 |
+| /Users/francis/Documents/code/project/paperSubSystem/src/components/layout/SideNav.jsx           | JavaScript JSX |        124 |          0 |         11 |        135 |
+| /Users/francis/Documents/code/project/paperSubSystem/src/components/layout/TopBar.jsx            | JavaScript JSX |        101 |          0 |          6 |        107 |
+| /Users/francis/Documents/code/project/paperSubSystem/src/features/auth/AuthProvider.jsx          | JavaScript JSX |        145 |          1 |         16 |        162 |
+| /Users/francis/Documents/code/project/paperSubSystem/src/features/papers/paperSchema.js          | JavaScript     |         48 |          0 |          9 |         57 |
+| /Users/francis/Documents/code/project/paperSubSystem/src/main.jsx                                | JavaScript JSX |         40 |          0 |          3 |         43 |
+| /Users/francis/Documents/code/project/paperSubSystem/src/pages/LoginPage.jsx                     | JavaScript JSX |        106 |          0 |          8 |        114 |
+| /Users/francis/Documents/code/project/paperSubSystem/src/pages/NotificationsPage.jsx             | JavaScript JSX |        133 |          0 |          8 |        141 |
+| /Users/francis/Documents/code/project/paperSubSystem/src/pages/ProfilePage.jsx                   | JavaScript JSX |        320 |          1 |         22 |        343 |
+| /Users/francis/Documents/code/project/paperSubSystem/src/pages/author/AuthorDashboardPage.jsx    | JavaScript JSX |        152 |          0 |         14 |        166 |
+| /Users/francis/Documents/code/project/paperSubSystem/src/pages/author/AuthorPaperDetailPage.jsx  | JavaScript JSX |        201 |          0 |         10 |        211 |
+| /Users/francis/Documents/code/project/paperSubSystem/src/pages/author/AuthorPaperFormPage.jsx    | JavaScript JSX |        366 |          0 |         22 |        388 |
+| /Users/francis/Documents/code/project/paperSubSystem/src/pages/author/AuthorPapersListPage.jsx   | JavaScript JSX |        141 |          0 |          6 |        147 |
+| /Users/francis/Documents/code/project/paperSubSystem/src/pages/author/AuthorPaymentsPage.jsx     | JavaScript JSX |        101 |          0 |          7 |        108 |
+| /Users/francis/Documents/code/project/paperSubSystem/src/pages/editor/EditorDashboardPage.jsx    | JavaScript JSX |        120 |          0 |         10 |        130 |
+| /Users/francis/Documents/code/project/paperSubSystem/src/pages/editor/EditorPaperDetailPage.jsx  | JavaScript JSX |        322 |          0 |         20 |        342 |
+| /Users/francis/Documents/code/project/paperSubSystem/src/pages/editor/EditorPapersListPage.jsx   | JavaScript JSX |        115 |          0 |          6 |        121 |
+| /Users/francis/Documents/code/project/paperSubSystem/src/pages/editor/EditorPaymentsPage.jsx     | JavaScript JSX |        304 |          0 |         14 |        318 |
+| /Users/francis/Documents/code/project/paperSubSystem/src/pages/editor/EditorSchedulesPage.jsx    | JavaScript JSX |        203 |          0 |         14 |        217 |
+| /Users/francis/Documents/code/project/paperSubSystem/src/pages/expert/ExpertDashboardPage.jsx    | JavaScript JSX |        114 |          0 |         11 |        125 |
+| /Users/francis/Documents/code/project/paperSubSystem/src/pages/expert/ExpertReviewDetailPage.jsx | JavaScript JSX |        170 |          0 |         10 |        180 |
+| /Users/francis/Documents/code/project/paperSubSystem/src/pages/expert/ExpertReviewsListPage.jsx  | JavaScript JSX |        105 |          0 |          6 |        111 |
+| /Users/francis/Documents/code/project/paperSubSystem/src/pages/expert/ExpertWithdrawalsPage.jsx  | JavaScript JSX |        135 |          0 |         10 |        145 |
+| /Users/francis/Documents/code/project/paperSubSystem/src/pages/status/ForbiddenPage.jsx          | JavaScript JSX |         17 |          0 |          3 |         20 |
+| /Users/francis/Documents/code/project/paperSubSystem/src/pages/status/NotFoundPage.jsx           | JavaScript JSX |         12 |          0 |          3 |         15 |
+| /Users/francis/Documents/code/project/paperSubSystem/src/routes/AppRoutes.jsx                    | JavaScript JSX |        167 |          0 |          8 |        175 |
+| /Users/francis/Documents/code/project/paperSubSystem/src/routes/ProtectedRoute.jsx               | JavaScript JSX |         22 |          0 |          7 |         29 |
+| /Users/francis/Documents/code/project/paperSubSystem/src/stores/authStorage.js                   | JavaScript     |         22 |          0 |          6 |         28 |
+| /Users/francis/Documents/code/project/paperSubSystem/src/styles/global.css                       | PostCSS        |         17 |          0 |          4 |         21 |
+| /Users/francis/Documents/code/project/paperSubSystem/src/utils/i18n.js                           | JavaScript     |         57 |          0 |          4 |         61 |
+| Total                                                                                            |                |      4,085 |          2 |        305 |      4,392 |
++--------------------------------------------------------------------------------------------------+----------------+------------+------------+------------+------------+

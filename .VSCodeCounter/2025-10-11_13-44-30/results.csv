@@ -1,0 +1,36 @@
+"filename", "language", "JavaScript JSX", "JavaScript", "PostCSS", "comment", "blank", "total"
+"/Users/francis/Documents/code/project/paperSubSystem/src/App.jsx", "JavaScript JSX", 26, 0, 0, 0, 6, 32
+"/Users/francis/Documents/code/project/paperSubSystem/src/api/axios.js", "JavaScript", 0, 54, 0, 0, 7, 61
+"/Users/francis/Documents/code/project/paperSubSystem/src/api/endpoints.js", "JavaScript", 0, 41, 0, 0, 1, 42
+"/Users/francis/Documents/code/project/paperSubSystem/src/components/ThemeProvider.jsx", "JavaScript JSX", 48, 0, 0, 0, 9, 57
+"/Users/francis/Documents/code/project/paperSubSystem/src/components/layout/AppLayout.jsx", "JavaScript JSX", 36, 0, 0, 0, 4, 40
+"/Users/francis/Documents/code/project/paperSubSystem/src/components/layout/SideNav.jsx", "JavaScript JSX", 124, 0, 0, 0, 11, 135
+"/Users/francis/Documents/code/project/paperSubSystem/src/components/layout/TopBar.jsx", "JavaScript JSX", 101, 0, 0, 0, 6, 107
+"/Users/francis/Documents/code/project/paperSubSystem/src/features/auth/AuthProvider.jsx", "JavaScript JSX", 145, 0, 0, 1, 16, 162
+"/Users/francis/Documents/code/project/paperSubSystem/src/features/papers/paperSchema.js", "JavaScript", 0, 48, 0, 0, 9, 57
+"/Users/francis/Documents/code/project/paperSubSystem/src/main.jsx", "JavaScript JSX", 40, 0, 0, 0, 3, 43
+"/Users/francis/Documents/code/project/paperSubSystem/src/pages/LoginPage.jsx", "JavaScript JSX", 106, 0, 0, 0, 8, 114
+"/Users/francis/Documents/code/project/paperSubSystem/src/pages/NotificationsPage.jsx", "JavaScript JSX", 133, 0, 0, 0, 8, 141
+"/Users/francis/Documents/code/project/paperSubSystem/src/pages/ProfilePage.jsx", "JavaScript JSX", 320, 0, 0, 1, 22, 343
+"/Users/francis/Documents/code/project/paperSubSystem/src/pages/author/AuthorDashboardPage.jsx", "JavaScript JSX", 152, 0, 0, 0, 14, 166
+"/Users/francis/Documents/code/project/paperSubSystem/src/pages/author/AuthorPaperDetailPage.jsx", "JavaScript JSX", 201, 0, 0, 0, 10, 211
+"/Users/francis/Documents/code/project/paperSubSystem/src/pages/author/AuthorPaperFormPage.jsx", "JavaScript JSX", 366, 0, 0, 0, 22, 388
+"/Users/francis/Documents/code/project/paperSubSystem/src/pages/author/AuthorPapersListPage.jsx", "JavaScript JSX", 141, 0, 0, 0, 6, 147
+"/Users/francis/Documents/code/project/paperSubSystem/src/pages/author/AuthorPaymentsPage.jsx", "JavaScript JSX", 101, 0, 0, 0, 7, 108
+"/Users/francis/Documents/code/project/paperSubSystem/src/pages/editor/EditorDashboardPage.jsx", "JavaScript JSX", 120, 0, 0, 0, 10, 130
+"/Users/francis/Documents/code/project/paperSubSystem/src/pages/editor/EditorPaperDetailPage.jsx", "JavaScript JSX", 322, 0, 0, 0, 20, 342
+"/Users/francis/Documents/code/project/paperSubSystem/src/pages/editor/EditorPapersListPage.jsx", "JavaScript JSX", 115, 0, 0, 0, 6, 121
+"/Users/francis/Documents/code/project/paperSubSystem/src/pages/editor/EditorPaymentsPage.jsx", "JavaScript JSX", 304, 0, 0, 0, 14, 318
+"/Users/francis/Documents/code/project/paperSubSystem/src/pages/editor/EditorSchedulesPage.jsx", "JavaScript JSX", 203, 0, 0, 0, 14, 217
+"/Users/francis/Documents/code/project/paperSubSystem/src/pages/expert/ExpertDashboardPage.jsx", "JavaScript JSX", 114, 0, 0, 0, 11, 125
+"/Users/francis/Documents/code/project/paperSubSystem/src/pages/expert/ExpertReviewDetailPage.jsx", "JavaScript JSX", 170, 0, 0, 0, 10, 180
+"/Users/francis/Documents/code/project/paperSubSystem/src/pages/expert/ExpertReviewsListPage.jsx", "JavaScript JSX", 105, 0, 0, 0, 6, 111
+"/Users/francis/Documents/code/project/paperSubSystem/src/pages/expert/ExpertWithdrawalsPage.jsx", "JavaScript JSX", 135, 0, 0, 0, 10, 145
+"/Users/francis/Documents/code/project/paperSubSystem/src/pages/status/ForbiddenPage.jsx", "JavaScript JSX", 17, 0, 0, 0, 3, 20
+"/Users/francis/Documents/code/project/paperSubSystem/src/pages/status/NotFoundPage.jsx", "JavaScript JSX", 12, 0, 0, 0, 3, 15
+"/Users/francis/Documents/code/project/paperSubSystem/src/routes/AppRoutes.jsx", "JavaScript JSX", 167, 0, 0, 0, 8, 175
+"/Users/francis/Documents/code/project/paperSubSystem/src/routes/ProtectedRoute.jsx", "JavaScript JSX", 22, 0, 0, 0, 7, 29
+"/Users/francis/Documents/code/project/paperSubSystem/src/stores/authStorage.js", "JavaScript", 0, 22, 0, 0, 6, 28
+"/Users/francis/Documents/code/project/paperSubSystem/src/styles/global.css", "PostCSS", 0, 0, 17, 0, 4, 21
+"/Users/francis/Documents/code/project/paperSubSystem/src/utils/i18n.js", "JavaScript", 0, 57, 0, 0, 4, 61
+"Total", "-", 3846, 222, 17, 2, 305, 4392
