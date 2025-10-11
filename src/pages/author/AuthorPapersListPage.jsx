@@ -1,3 +1,7 @@
+/**
+ * 文稿列表页负责列表查询、条件筛选与跳转，不在组件内持久化状态。
+ * 与后端约定：GET /api/papers 返回的字段中，作者仅能看到自己的稿件。
+ */
 import {
   ActionIcon,
   Badge,
@@ -34,11 +38,16 @@ const statusOptions = [
 ];
 
 export default function AuthorPapersListPage() {
+  // 三类筛选条件：状态、关键字、时间区间
   const [status, setStatus] = useState('all');
   const [keyword, setKeyword] = useState('');
   const [dateRange, setDateRange] = useState([null, null]);
   const navigate = useNavigate();
 
+  /**
+   * 列表查询与筛选：依赖数组包含筛选条件，React Query 会自动做缓存和增量刷新。
+   * 注意：后端分页能力未在文档体现，如需支持可在 params 中加 page/pageSize。
+   */
   const { data, isLoading, isFetching } = useQuery({
     queryKey: ['papers', 'author', { status, keyword, dateRange }],
     queryFn: async () => {
@@ -52,6 +61,10 @@ export default function AuthorPapersListPage() {
     }
   });
 
+  /**
+   * 将接口数据映射成表格行：保持纯函数式，以便 React 在查询更新时最小化 diff。
+   * 处理 paper_id/id 混用，以兼容旧数据。
+   */
   const rows = useMemo(
     () =>
       (data || []).map((paper) => (

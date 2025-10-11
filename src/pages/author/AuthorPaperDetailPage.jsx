@@ -1,3 +1,7 @@
+/**
+ * 论文详情页包含稿件基础信息与修改稿提交流程。这里聚焦于数据展示与附件上传，
+ * 不在前端混入状态流转逻辑，确保功能职责清晰。
+ */
 import {
   Anchor,
   Badge,
@@ -28,6 +32,7 @@ export default function AuthorPaperDetailPage() {
   const [revisionFile, setRevisionFile] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
 
+  // 单篇论文详情：缓存 key 带上 paperId，方便提交后针对性失效。
   const { data: paper, isLoading } = useQuery({
     queryKey: ['paper', paperId],
     queryFn: async () => {
@@ -36,6 +41,10 @@ export default function AuthorPaperDetailPage() {
     }
   });
 
+  /**
+   * 修改稿上传：只负责附件替换，其他元信息不允许在此处修改。
+   * 上传成功后刷新当前详情，确保最新附件链接立即可见。
+   */
   const updateMutation = useMutation({
     mutationFn: async (file) => {
       const formData = new FormData();
@@ -70,6 +79,10 @@ export default function AuthorPaperDetailPage() {
     }
   });
 
+  /**
+   * 后端若尚未提供完整时间线，前端给出默认流程，确保界面始终有反馈。
+   * 一旦接口返回 timeline 字段，将直接使用真实数据。
+   */
   const stages = paper?.timeline || [
     { id: 1, name: '收稿', status: 'done', date: paper?.submission_date },
     { id: 2, name: '初审', status: 'pending' },
@@ -81,6 +94,7 @@ export default function AuthorPaperDetailPage() {
     { id: 8, name: '排期', status: 'pending' }
   ];
 
+  // 仅在待修状态下展示上传区，与业务约定保持一致。
   const canSubmitRevision = ['revision', 'major_revision'].includes(paper?.status);
 
   return (

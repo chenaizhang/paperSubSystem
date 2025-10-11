@@ -1,3 +1,8 @@
+/**
+ * Author dashboards aggregate assorted data queries. To keep the component readable,
+ * the data processing logic is intentionally split into small helpers with clear
+ * responsibilities and documented assumptions.
+ */
 import {
   Badge,
   Card,
@@ -7,37 +12,41 @@ import {
   Stack,
   Text,
   Title,
-  Timeline
-} from '@mantine/core';
-import { useQuery } from '@tanstack/react-query';
-import api from '../../api/axios.js';
-import { endpoints } from '../../api/endpoints.js';
-import dayjs from 'dayjs';
-import PropTypes from 'prop-types';
+  Timeline,
+} from "@mantine/core";
+import { useQuery } from "@tanstack/react-query";
+import api from "../../api/axios.js";
+import { endpoints } from "../../api/endpoints.js";
+import dayjs from "dayjs";
+import PropTypes from "prop-types";
 
 const statusColors = {
-  submitted: 'blue',
-  reviewing: 'orange',
-  revision: 'yellow',
-  accepted: 'green',
-  rejected: 'red'
+  submitted: "blue",
+  reviewing: "orange",
+  revision: "yellow",
+  accepted: "green",
+  rejected: "red",
 };
 
 export default function AuthorDashboardPage() {
+  // 拉取作者可见的论文列表。接口已经做权限控制，这里不额外过滤。
   const { data: papers, isLoading } = useQuery({
-    queryKey: ['papers', 'author'],
+    queryKey: ["papers", "author"],
     queryFn: async () => {
       const response = await api.get(endpoints.papers.base);
       return response.data ?? [];
-    }
+    },
   });
 
+  // 最新通知仅需展示少量，UI 层不做分页，按时间倒序即可。
   const { data: notifications } = useQuery({
-    queryKey: ['notifications', 'latest'],
+    queryKey: ["notifications", "latest"],
     queryFn: async () => {
-      const response = await api.get(endpoints.notifications.author, { params: { pageSize: 5 } });
+      const response = await api.get(endpoints.notifications.author, {
+        params: { pageSize: 5 },
+      });
       return response.data?.items ?? response.data ?? [];
-    }
+    },
   });
 
   if (isLoading) {
@@ -50,7 +59,7 @@ export default function AuthorDashboardPage() {
 
   const stats = (papers || []).reduce(
     (acc, paper) => {
-      const status = paper.status || 'draft';
+      const status = paper.status || "draft";
       acc.total += 1;
       acc.byStatus[status] = (acc.byStatus[status] || 0) + 1;
       return acc;
@@ -58,17 +67,27 @@ export default function AuthorDashboardPage() {
     { total: 0, byStatus: {} }
   );
 
+  // “最近进度”按照更新时间排序，前端不做分页，最多展示 5 条。
   const recentPapers = [...(papers || [])]
-    .sort((a, b) => new Date(b.updated_at || b.submission_date) - new Date(a.updated_at || a.submission_date))
+    .sort(
+      (a, b) =>
+        new Date(b.updated_at || b.submission_date) -
+        new Date(a.updated_at || a.submission_date)
+    )
     .slice(0, 5);
 
   return (
     <Stack gap="xl">
-      <Title order={2}>作者仪表盘</Title>
+      <Title order={2}>仪表盘</Title>
       <SimpleGrid cols={{ base: 1, md: 3 }}>
         <DashboardStat title="论文总数" value={stats.total} />
         {Object.entries(stats.byStatus).map(([status, count]) => (
-          <DashboardStat key={status} title={`状态：${status}`} value={count} badgeColor={statusColors[status]} />
+          <DashboardStat
+            key={status}
+            title={`状态：${status}`}
+            value={count}
+            badgeColor={statusColors[status]}
+          />
         ))}
       </SimpleGrid>
 
@@ -83,12 +102,12 @@ export default function AuthorDashboardPage() {
               <Card key={paper.id} withBorder radius="md">
                 <Group justify="space-between" mb="xs">
                   <Text fw={600}>{paper.title_zh || paper.title_en}</Text>
-                  <Badge color={statusColors[paper.status] || 'gray'}>
-                    {paper.status || '草稿'}
+                  <Badge color={statusColors[paper.status] || "gray"}>
+                    {paper.status || "草稿"}
                   </Badge>
                 </Group>
                 <Text size="sm" c="dimmed">
-                  提交时间：{dayjs(paper.submission_date).format('YYYY-MM-DD')}
+                  提交时间：{dayjs(paper.submission_date).format("YYYY-MM-DD")}
                 </Text>
                 {paper.current_stage && (
                   <Text size="sm">当前阶段：{paper.current_stage}</Text>
@@ -107,15 +126,21 @@ export default function AuthorDashboardPage() {
             {notifications?.map((notification) => (
               <Card key={notification.id} withBorder>
                 <Group justify="space-between" mb="xs">
-                  <Text fw={600}>{notification.title || notification.type}</Text>
-                  <Badge color={notification.read ? 'gray' : 'blue'}>
-                    {notification.read ? '已读' : '未读'}
+                  <Text fw={600}>
+                    {notification.title || notification.type}
+                  </Text>
+                  <Badge color={notification.read ? "gray" : "blue"}>
+                    {notification.read ? "已读" : "未读"}
                   </Badge>
                 </Group>
                 <Text size="sm" c="dimmed">
-                  {dayjs(notification.created_at || notification.createdAt).format('YYYY-MM-DD HH:mm')}
+                  {dayjs(
+                    notification.created_at || notification.createdAt
+                  ).format("YYYY-MM-DD HH:mm")}
                 </Text>
-                <Text size="sm">{notification.content || notification.message}</Text>
+                <Text size="sm">
+                  {notification.content || notification.message}
+                </Text>
               </Card>
             ))}
           </Stack>
@@ -140,6 +165,10 @@ export default function AuthorDashboardPage() {
   );
 }
 
+/**
+ * Presentational card for dashboard counters. Keeps layout logic isolated
+ * so the parent component focuses purely on data orchestration.
+ */
 function DashboardStat({ title, value, badgeColor }) {
   return (
     <Card withBorder shadow="sm" radius="md">
@@ -157,9 +186,9 @@ function DashboardStat({ title, value, badgeColor }) {
 DashboardStat.propTypes = {
   title: PropTypes.string.isRequired,
   value: PropTypes.number.isRequired,
-  badgeColor: PropTypes.string
+  badgeColor: PropTypes.string,
 };
 
 DashboardStat.defaultProps = {
-  badgeColor: undefined
+  badgeColor: undefined,
 };

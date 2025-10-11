@@ -1,3 +1,7 @@
+/**
+ * 作者投稿表单负责新建/编辑及上传稿件。为了减少表单状态与副作用耦合，
+ * 所有外部数据获取都集中在 React Query 中，表单仅负责渲染与收集值。
+ */
 import {
   ActionIcon,
   Button,
@@ -57,11 +61,13 @@ export default function AuthorPaperFormPage({ mode }) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [existingFile, setExistingFile] = useState(null);
 
+  // 表单实例：依据 mode 加载不同的 Zod schema。
   const form = useForm({
     initialValues,
     validate: zodResolver(isEdit ? editPaperSchema : createPaperSchema)
   });
 
+  // 基础资料：自动带出作者本人及单位信息，减少重复输入。
   const { data: profile } = useQuery({
     queryKey: ['profile'],
     queryFn: async () => {
@@ -98,6 +104,10 @@ export default function AuthorPaperFormPage({ mode }) {
     }
   });
 
+  /**
+   * 非编辑态时默认把当前登录作者写入 authors 列表。由于作者可能有多个单位，这里仅选取第一个，
+   * 后续允许在 UI 中再调整。
+   */
   useEffect(() => {
     if (!isEdit && profile && userId) {
       form.setValues((prev) => ({
@@ -114,6 +124,10 @@ export default function AuthorPaperFormPage({ mode }) {
     }
   }, [isEdit, profile, userId, form]);
 
+  /**
+   * 作者和单位的下拉数据：后端没有专门接口，这里复用用户 profile 中的缓存字段。
+   * 注意 self（本人）选项优先显示，并带上 (本人) 标注。
+   */
   const authorOptions = useMemo(() => {
     const authors = profile?.authorsList || profile?.authors || [];
     const self = profile
@@ -141,6 +155,10 @@ export default function AuthorPaperFormPage({ mode }) {
     }));
   }, [profile]);
 
+  /**
+   * 提交/更新论文：通过 FormData 上传文件，其他字段使用 JSON 序列化。
+   * 上传进度通过 Axios onUploadProgress 收集，以便前端展示。
+   */
   const mutation = useMutation({
     mutationFn: async (values) => {
       const endpoint = isEdit
@@ -199,6 +217,7 @@ export default function AuthorPaperFormPage({ mode }) {
       form.setFieldError('attachment', '请上传稿件附件');
       return;
     }
+    // 关键词去重与去空格，确保后台能接收规范数据。
     mutation.mutate({
       ...values,
       keywords_zh: sanitizeKeywords(values.keywords_zh),

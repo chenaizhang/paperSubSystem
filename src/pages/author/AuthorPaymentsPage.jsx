@@ -1,3 +1,7 @@
+/**
+ * 作者支付信息页：聚焦查看消费记录，不涉及支付创建。
+ * 选择不同论文时，只刷新对应列表以减少不必要的网络请求。
+ */
 import {
   Badge,
   Button,
@@ -19,6 +23,7 @@ import dayjs from 'dayjs';
 export default function AuthorPaymentsPage() {
   const [selectedPaper, setSelectedPaper] = useState(null);
 
+  // 作者论文列表用于下拉筛选，复用论文接口避免维护额外 API。
   const { data: papers } = useQuery({
     queryKey: ['papers', 'author'],
     queryFn: async () => {
@@ -27,6 +32,7 @@ export default function AuthorPaymentsPage() {
     }
   });
 
+  // 仅在选择论文后拉取支付记录，避免空查询。
   const { data: payments, isFetching } = useQuery({
     queryKey: ['payments', selectedPaper],
     enabled: Boolean(selectedPaper),
@@ -99,6 +105,7 @@ export default function AuthorPaymentsPage() {
             </Card>
           )}
 
+          {/* 初始态：引导用户先做筛选 */}
           {!selectedPaper && <Text c="dimmed">请选择论文查看详细支付信息。</Text>}
         </Stack>
       </Card>
