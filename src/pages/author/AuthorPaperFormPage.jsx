@@ -13,7 +13,6 @@ import {
   Select,
   SimpleGrid,
   Stack,
-  Tabs,
   TagsInput,
   Text,
   Textarea,
@@ -244,147 +243,133 @@ export default function AuthorPaperFormPage({ mode }) {
         <LoadingOverlay visible={isLoading || mutation.isPending} overlayProps={{ blur: 2 }} />
         <form onSubmit={form.onSubmit(handleSubmit)}>
           <Stack gap="xl">
-            <Tabs defaultValue="basic">
-              <Tabs.List>
-                <Tabs.Tab value="basic">基本信息</Tabs.Tab>
-                <Tabs.Tab value="authors">作者与单位</Tabs.Tab>
-                <Tabs.Tab value="attachment">附件与提交</Tabs.Tab>
-              </Tabs.List>
+            <Stack gap="md">
+              <Title order={3}>基本信息</Title>
+              <SimpleGrid cols={{ base: 1, md: 2 }}>
+                <TextInput label="中文标题" required {...form.getInputProps('title_zh')} />
+                <TextInput label="英文标题" {...form.getInputProps('title_en')} />
+              </SimpleGrid>
+              <SimpleGrid cols={{ base: 1, md: 2 }}>
+                <Textarea
+                  label="中文摘要"
+                  minRows={4}
+                  required
+                  {...form.getInputProps('abstract_zh')}
+                />
+                <Textarea
+                  label="英文摘要"
+                  minRows={4}
+                  {...form.getInputProps('abstract_en')}
+                />
+              </SimpleGrid>
+              <SimpleGrid cols={{ base: 1, md: 2 }}>
+                <TagsInput
+                  label="中文关键词"
+                  description="1-8 个关键词，回车分隔"
+                  required
+                  {...form.getInputProps('keywords_zh')}
+                />
+                <TagsInput
+                  label="英文关键词"
+                  description="可选，回车分隔"
+                  {...form.getInputProps('keywords_en')}
+                />
+              </SimpleGrid>
+              <SimpleGrid cols={{ base: 1, md: 2 }}>
+                <TextInput label="资助基金名称" {...form.getInputProps('fund_name')} />
+                <TextInput label="资助编号" {...form.getInputProps('fund_code')} />
+              </SimpleGrid>
+            </Stack>
 
-              <Tabs.Panel value="basic" pt="md">
-                <Stack gap="md">
-                  <SimpleGrid cols={{ base: 1, md: 2 }}>
-                    <TextInput label="中文标题" required {...form.getInputProps('title_zh')} />
-                    <TextInput label="英文标题" {...form.getInputProps('title_en')} />
-                  </SimpleGrid>
-                  <SimpleGrid cols={{ base: 1, md: 2 }}>
-                    <Textarea
-                      label="中文摘要"
-                      minRows={4}
-                      required
-                      {...form.getInputProps('abstract_zh')}
-                    />
-                    <Textarea
-                      label="英文摘要"
-                      minRows={4}
-                      {...form.getInputProps('abstract_en')}
-                    />
-                  </SimpleGrid>
-                  <SimpleGrid cols={{ base: 1, md: 2 }}>
-                    <TagsInput
-                      label="中文关键词"
-                      description="1-8 个关键词，回车分隔"
-                      required
-                      {...form.getInputProps('keywords_zh')}
-                    />
-                    <TagsInput
-                      label="英文关键词"
-                      description="可选，回车分隔"
-                      {...form.getInputProps('keywords_en')}
-                    />
-                  </SimpleGrid>
-                  <SimpleGrid cols={{ base: 1, md: 2 }}>
-                    <TextInput label="资助基金名称" {...form.getInputProps('fund_name')} />
-                    <TextInput label="资助编号" {...form.getInputProps('fund_code')} />
-                  </SimpleGrid>
-                </Stack>
-              </Tabs.Panel>
+            <Stack gap="md">
+              <Group justify="space-between">
+                <Title order={3}>作者与单位</Title>
+                <Button
+                  leftSection={<IconPlus size={16} />}
+                  variant="light"
+                  onClick={() =>
+                    form.insertListItem('authors', { author_id: '', institution_id: '' })
+                  }
+                >
+                  添加作者
+                </Button>
+              </Group>
 
-              <Tabs.Panel value="authors" pt="md">
-                <Stack gap="md">
-                  <Group justify="space-between">
-                    <Title order={4}>作者与单位关联</Title>
-                    <Button
-                      leftSection={<IconPlus size={16} />}
-                      variant="light"
-                      onClick={() =>
-                        form.insertListItem('authors', { author_id: '', institution_id: '' })
-                      }
-                    >
-                      添加作者
-                    </Button>
+              {form.values.authors.map((item, index) => (
+                <Card withBorder key={index}>
+                  <Group justify="space-between" mb="sm">
+                    <Text fw={600}>作者 {index + 1}</Text>
+                    {form.values.authors.length > 1 && (
+                      <ActionIcon
+                        color="red"
+                        onClick={() => form.removeListItem('authors', index)}
+                        aria-label="删除作者"
+                      >
+                        <IconTrash size={16} />
+                      </ActionIcon>
+                    )}
                   </Group>
+                  <SimpleGrid cols={{ base: 1, md: 2 }}>
+                    <Select
+                      label="作者"
+                      placeholder="请选择作者"
+                      data={authorOptions}
+                      searchable
+                      value={item.author_id ? String(item.author_id) : ''}
+                      onChange={(value) =>
+                        form.setFieldValue(`authors.${index}.author_id`, value || '')
+                      }
+                      error={form.errors[`authors.${index}.author_id`]}
+                    />
+                    <Select
+                      label="所属单位"
+                      placeholder="请选择单位"
+                      data={institutionOptions}
+                      searchable
+                      value={item.institution_id ? String(item.institution_id) : ''}
+                      onChange={(value) =>
+                        form.setFieldValue(`authors.${index}.institution_id`, value || '')
+                      }
+                      error={form.errors[`authors.${index}.institution_id`]}
+                    />
+                  </SimpleGrid>
+                </Card>
+              ))}
+            </Stack>
 
-                  {form.values.authors.map((item, index) => (
-                    <Card withBorder key={index}>
-                      <Group justify="space-between" mb="sm">
-                        <Text fw={600}>作者 {index + 1}</Text>
-                        {form.values.authors.length > 1 && (
-                          <ActionIcon
-                            color="red"
-                            onClick={() => form.removeListItem('authors', index)}
-                            aria-label="删除作者"
-                          >
-                            <IconTrash size={16} />
-                          </ActionIcon>
-                        )}
-                      </Group>
-                      <SimpleGrid cols={{ base: 1, md: 2 }}>
-                        <Select
-                          label="作者"
-                          placeholder="请选择作者"
-                          data={authorOptions}
-                          searchable
-                          value={item.author_id ? String(item.author_id) : ''}
-                          onChange={(value) =>
-                            form.setFieldValue(`authors.${index}.author_id`, value || '')
-                          }
-                          error={form.errors[`authors.${index}.author_id`]}
-                        />
-                        <Select
-                          label="所属单位"
-                          placeholder="请选择单位"
-                          data={institutionOptions}
-                          searchable
-                          value={item.institution_id ? String(item.institution_id) : ''}
-                          onChange={(value) =>
-                            form.setFieldValue(`authors.${index}.institution_id`, value || '')
-                          }
-                          error={form.errors[`authors.${index}.institution_id`]}
-                        />
-                      </SimpleGrid>
-                    </Card>
-                  ))}
-                </Stack>
-              </Tabs.Panel>
-
-              <Tabs.Panel value="attachment" pt="md">
-                <Stack gap="md">
-                  {existingFile && !form.values.attachment && (
-                    <Card withBorder>
-                      <Text>
-                        当前附件：
-                        <Button
-                          component="a"
-                          href={existingFile}
-                          target="_blank"
-                          variant="subtle"
-                          leftSection={<IconUpload size={16} />}
-                        >
-                          下载查看
-                        </Button>
-                      </Text>
-                    </Card>
-                  )}
-                  <FileInput
-                    label="上传稿件附件"
-                    placeholder="选择 PDF 或 Word 文件"
-                    required={!isEdit}
-                    accept=".pdf,.doc,.docx"
-                    leftSection={<IconUpload size={16} />}
-                    value={form.values.attachment}
-                    onChange={(file) => form.setFieldValue('attachment', file)}
-                    error={form.errors.attachment}
-                  />
-                  {uploadProgress > 0 && (
-                    <Progress value={uploadProgress} size="lg" color="blue" />
-                  )}
-                  <Text size="sm" c="dimmed">
-                    支持 PDF / DOC / DOCX，最大 20MB。
+            <Stack gap="md">
+              <Title order={3}>附件与提交</Title>
+              {existingFile && !form.values.attachment && (
+                <Card withBorder>
+                  <Text>
+                    当前附件：
+                    <Button
+                      component="a"
+                      href={existingFile}
+                      target="_blank"
+                      variant="subtle"
+                      leftSection={<IconUpload size={16} />}
+                    >
+                      下载查看
+                    </Button>
                   </Text>
-                </Stack>
-              </Tabs.Panel>
-            </Tabs>
+                </Card>
+              )}
+              <FileInput
+                label="上传稿件附件"
+                placeholder="选择 PDF 或 Word 文件"
+                required={!isEdit}
+                accept=".pdf,.doc,.docx"
+                leftSection={<IconUpload size={16} />}
+                value={form.values.attachment}
+                onChange={(file) => form.setFieldValue('attachment', file)}
+                error={form.errors.attachment}
+              />
+              {uploadProgress > 0 && <Progress value={uploadProgress} size="lg" color="blue" />}
+              <Text size="sm" c="dimmed">
+                支持 PDF / DOC / DOCX，最大 20MB。
+              </Text>
+            </Stack>
 
             <Group justify="flex-end" gap="md">
               <Button variant="default" onClick={() => navigate(-1)}>
