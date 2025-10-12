@@ -39,6 +39,7 @@ const authorSchema = z.object({
   name: z.string().trim().min(1, "请输入姓名"),
   age: z.coerce.number().min(18, "年龄需要大于18").max(120, "年龄过大"),
   email: z.string().email("请输入正确的邮箱"),
+  author_id: z.string().optional(),
   institutions: z.array(authorInstitutionSchema).optional(),
   degree: z.string().optional(),
   title: z.string().optional(),
@@ -112,6 +113,7 @@ const defaultValues = {
   name: "",
   age: 30,
   email: "",
+  author_id: "",
   institutions: [createInstitutionEntry()],
   degree: "",
   title: "",
@@ -172,6 +174,7 @@ export default function ProfilePage() {
 
   function applyProfileToForm(profile) {
     const phoneValue = extractPhone(profile);
+    const authorIdValue = toStringOrEmpty(profile.author_id);
     let values;
     if (role === "author") {
       values = {
@@ -188,6 +191,7 @@ export default function ProfilePage() {
         research_areas: profile.research_areas || "",
         bio: profile.bio || "",
         phone: phoneValue,
+        author_id: authorIdValue,
       };
     } else if (role === "expert") {
       const normalizedInstitutions =
@@ -232,6 +236,9 @@ export default function ProfilePage() {
         name: profile.name || "",
         email: profile.email || "",
       };
+    }
+    if (values && values.author_id === undefined) {
+      values.author_id = authorIdValue;
     }
     const nextValues = values ?? defaultValues;
     form.setValues(nextValues);
@@ -408,23 +415,28 @@ export default function ProfilePage() {
 
   const mutation = useMutation({
     mutationFn: async (values) => {
+      const {
+        author_id: authorId,
+        institutions: rawInstitutions,
+        ...restValues
+      } = values;
       const payload =
         role === "editor"
           ? {
-              name: values.name,
-              email: values.email,
+              name: restValues.name,
+              email: restValues.email,
             }
           : {
-              ...values,
-              phone: trimString(values.phone),
+              ...restValues,
+              phone: trimString(restValues.phone),
             };
 
       let normalizedInstitutions = [];
       const shouldSyncInstitutions =
-        isInstitutionRole && Array.isArray(values.institutions);
+        isInstitutionRole && Array.isArray(rawInstitutions);
 
       if (shouldSyncInstitutions) {
-        normalizedInstitutions = await syncInstitutions(values.institutions);
+        normalizedInstitutions = await syncInstitutions(rawInstitutions);
         payload.institutions = normalizedInstitutions.map((item) => ({
           name: item.name,
           city: item.city,
@@ -448,6 +460,10 @@ export default function ProfilePage() {
           city: item.city,
           zip_code: item.zip_code,
         }));
+      }
+
+      if (authorId !== undefined) {
+        result.author_id = toStringOrEmpty(authorId);
       }
 
       return result;
@@ -536,9 +552,11 @@ export default function ProfilePage() {
 
 function AuthorFields({ form, isEditing }) {
   const institutions = form.values.institutions ?? [];
+  const authorIdDisplay = toStringOrEmpty(form.values.author_id) || "—";
   return (
     <Stack gap="md">
       <Title order={4}>基础信息</Title>
+      <Text>作者ID: {authorIdDisplay}</Text>
       <SimpleGrid cols={{ base: 1, sm: 2 }}>
         <TextInput
           label="姓名"
