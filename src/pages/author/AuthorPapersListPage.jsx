@@ -15,33 +15,30 @@ import {
   Table,
   Text,
   TextInput,
-  Title
-} from '@mantine/core';
-import { IconEye } from '@tabler/icons-react';
-import { DatePickerInput } from '@mantine/dates';
-import { useNavigate } from 'react-router-dom';
-import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import dayjs from 'dayjs';
-import api from '../../api/axios.js';
-import { endpoints } from '../../api/endpoints.js';
-import { deriveCurrentStage, mapProgressToStages } from '../../utils/paperProgress.js';
-
-const statusOptions = [
-  { label: '全部状态', value: 'all' },
-  { label: '草稿', value: 'draft' },
-  { label: '待初审', value: 'initial_review' },
-  { label: '外审中', value: 'peer_review' },
-  { label: '修改中', value: 'revision' },
-  { label: '录用', value: 'accepted' },
-  { label: '拒稿', value: 'rejected' },
-  { label: '支付完成', value: 'paid' }
-];
+  Title,
+} from "@mantine/core";
+import { IconEye } from "@tabler/icons-react";
+import { DatePickerInput } from "@mantine/dates";
+import { useNavigate } from "react-router-dom";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import dayjs from "dayjs";
+import api from "../../api/axios.js";
+import { endpoints } from "../../api/endpoints.js";
+import {
+  deriveCurrentStage,
+  mapProgressToStages,
+} from "../../utils/paperProgress.js";
+import {
+  REVIEW_STATUS_OPTIONS,
+  getReviewStatusLabel,
+  getReviewStatusColor,
+} from "../../utils/reviewStatus.js";
 
 export default function AuthorPapersListPage() {
-  // 三类筛选条件：状态、关键字、时间区间
-  const [status, setStatus] = useState('all');
-  const [keyword, setKeyword] = useState('');
+  // 三类筛选条件：评审意见、关键字、时间区间
+  const [status, setStatus] = useState("all");
+  const [keyword, setKeyword] = useState("");
   const [dateRange, setDateRange] = useState([null, null]);
   const navigate = useNavigate();
 
@@ -50,28 +47,30 @@ export default function AuthorPapersListPage() {
    * 注意：后端分页能力未在文档体现，如需支持可在 params 中加 page/pageSize。
    */
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ['papers', 'author', { status, keyword, dateRange }],
+    queryKey: ["papers", "author", { status, keyword, dateRange }],
     queryFn: async () => {
       const params = {};
-      if (status !== 'all') params.status = status;
+      if (status !== "all") params.status = status;
       if (keyword) params.keyword = keyword;
-      if (dateRange[0]) params.start_date = dayjs(dateRange[0]).format('YYYY-MM-DD');
-      if (dateRange[1]) params.end_date = dayjs(dateRange[1]).format('YYYY-MM-DD');
+      if (dateRange[0])
+        params.start_date = dayjs(dateRange[0]).format("YYYY-MM-DD");
+      if (dateRange[1])
+        params.end_date = dayjs(dateRange[1]).format("YYYY-MM-DD");
       const response = await api.get(endpoints.papers.base, { params });
       return response.data ?? [];
-    }
+    },
   });
 
   const {
     data: progressList,
     isLoading: isProgressLoading,
-    error: progressError
+    error: progressError,
   } = useQuery({
-    queryKey: ['papers', 'progress', 'author'],
+    queryKey: ["papers", "progress", "author"],
     queryFn: async () => {
       const response = await api.get(endpoints.papers.progressList);
       return response.data ?? [];
-    }
+    },
   });
 
   const progressIndex = useMemo(() => {
@@ -83,11 +82,12 @@ export default function AuthorPapersListPage() {
       }
       const stages = mapProgressToStages(progress);
       const activeStage =
-        stages.find((stage) => stage.status !== 'finished') || stages[stages.length - 1];
+        stages.find((stage) => stage.status !== "finished") ||
+        stages[stages.length - 1];
       map.set(String(paperId), {
         currentStage: deriveCurrentStage(progress),
         currentStageStatus: activeStage?.statusText,
-        currentStageColor: activeStage?.color || 'blue'
+        currentStageColor: activeStage?.color || "blue",
       });
     });
     return map;
@@ -100,10 +100,12 @@ export default function AuthorPapersListPage() {
   const rows = useMemo(() => {
     return (data || []).map((paper) => {
       const paperId = paper.paper_id || paper.id;
-      const progress = paperId !== undefined ? progressIndex.get(String(paperId)) : undefined;
-      const stageLabel = progress?.currentStage || paper.current_stage || '待更新';
+      const progress =
+        paperId !== undefined ? progressIndex.get(String(paperId)) : undefined;
+      const stageLabel =
+        progress?.currentStage || paper.current_stage || "待更新";
       const stageStatus = progress?.currentStageStatus;
-      const stageColor = progress?.currentStageColor || 'gray';
+      const stageColor = progress?.currentStageColor || "gray";
 
       return (
         <Table.Tr key={paperId}>
@@ -126,10 +128,14 @@ export default function AuthorPapersListPage() {
             </Stack>
           </Table.Td>
           <Table.Td>
-            {paper.submission_date ? dayjs(paper.submission_date).format('YYYY-MM-DD') : '—'}
+            {paper.submission_date
+              ? dayjs(paper.submission_date).format("YYYY-MM-DD")
+              : "—"}
           </Table.Td>
           <Table.Td>
-            <Badge>{paper.status || '未知'}</Badge>
+            <Badge color={getReviewStatusColor(paper.status)}>
+              {getReviewStatusLabel(paper.status)}
+            </Badge>
           </Table.Td>
           <Table.Td>
             <Stack gap={4}>
@@ -159,7 +165,7 @@ export default function AuthorPapersListPage() {
     <Stack gap="xl">
       <Group justify="space-between">
         <Title order={2}>我的论文</Title>
-        <Button onClick={() => navigate('/author/papers/new')}>提交新论文</Button>
+        <Button onClick={() => navigate("/author/papers/new")}>投稿</Button>
       </Group>
       <Card withBorder shadow="sm" radius="md" pos="relative">
         <LoadingOverlay
@@ -168,10 +174,10 @@ export default function AuthorPapersListPage() {
         />
         <Group mb="md" wrap="wrap" gap="md">
           <Select
-            data={statusOptions}
+            data={REVIEW_STATUS_OPTIONS}
             value={status}
-            onChange={(value) => setStatus(value || 'all')}
-            aria-label="按状态筛选"
+            onChange={(value) => setStatus(value || "all")}
+            aria-label="按评审意见筛选"
           />
           <DatePickerInput
             type="range"
@@ -187,13 +193,19 @@ export default function AuthorPapersListPage() {
             aria-label="按关键词筛选"
           />
         </Group>
-        <Table striped highlightOnHover withBorder horizontalSpacing="md" verticalSpacing="sm">
+        <Table
+          striped
+          highlightOnHover
+          withBorder
+          horizontalSpacing="md"
+          verticalSpacing="sm"
+        >
           <Table.Thead>
             <Table.Tr>
               <Table.Th>ID</Table.Th>
               <Table.Th>标题</Table.Th>
               <Table.Th>提交日期</Table.Th>
-              <Table.Th>状态</Table.Th>
+              <Table.Th>评审意见</Table.Th>
               <Table.Th>当前进度</Table.Th>
               <Table.Th>操作</Table.Th>
             </Table.Tr>

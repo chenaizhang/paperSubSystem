@@ -25,6 +25,11 @@ import dayjs from 'dayjs';
 import { useMemo, useState } from 'react';
 import { notifications } from '@mantine/notifications';
 import { mapProgressToStages } from '../../utils/paperProgress.js';
+import {
+  getReviewStatusColor,
+  getReviewStatusLabel,
+  normalizeReviewStatus
+} from '../../utils/reviewStatus.js';
 
 export default function AuthorPaperDetailPage() {
   const { paperId } = useParams();
@@ -105,8 +110,9 @@ export default function AuthorPaperDetailPage() {
     return mapped;
   }, [progress, submissionDate]);
 
-  // 仅在待修状态下展示上传区，与业务约定保持一致。
-  const canSubmitRevision = ['revision', 'major_revision'].includes(paper?.status);
+  const reviewStatus = normalizeReviewStatus(paper?.status);
+  // 仅在小修或大修评审意见下展示上传区，与业务约定保持一致。
+  const canSubmitRevision = ['Minor Revision', 'Major Revision'].includes(reviewStatus);
 
   return (
     <Stack gap="xl">
@@ -126,7 +132,9 @@ export default function AuthorPaperDetailPage() {
         <LoadingOverlay visible={isLoading} overlayProps={{ blur: 2 }} />
         <Stack gap="md">
           <Group gap="xs">
-            <Badge color="blue">{paper?.status || '未知状态'}</Badge>
+            <Badge color={getReviewStatusColor(paper?.status)}>
+              {getReviewStatusLabel(paper?.status)}
+            </Badge>
             {paper?.current_stage && <Badge variant="light">{paper.current_stage}</Badge>}
           </Group>
           <Text fw={600}>英文标题</Text>

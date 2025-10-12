@@ -24,15 +24,11 @@ import {
   deriveLastUpdatedAt,
   mapProgressToStages,
 } from "../../utils/paperProgress.js";
-
-const statusColors = {
-  draft: "gray",
-  submitted: "blue",
-  reviewing: "orange",
-  revision: "yellow",
-  accepted: "green",
-  rejected: "red",
-};
+import {
+  getReviewStatusColor,
+  getReviewStatusLabel,
+  normalizeReviewStatus,
+} from "../../utils/reviewStatus.js";
 
 function normalizeDateInput(value) {
   if (!value || typeof value !== "string") {
@@ -73,24 +69,6 @@ export default function AuthorDashboardPage() {
       return response.data?.items ?? response.data ?? [];
     },
   });
-
-  if (isLoading) {
-    return (
-      <Stack align="center" justify="center" h="60vh">
-        <Loader size="lg" />
-      </Stack>
-    );
-  }
-
-  const stats = (papers || []).reduce(
-    (acc, paper) => {
-      const status = paper.status || "draft";
-      acc.total += 1;
-      acc.byStatus[status] = (acc.byStatus[status] || 0) + 1;
-      return acc;
-    },
-    { total: 0, byStatus: {} }
-  );
 
   const paperIndex = useMemo(() => {
     const index = new Map();
@@ -135,7 +113,7 @@ export default function AuthorDashboardPage() {
               paperMeta?.title_zh ||
               paperMeta?.title_en ||
               "未命名稿件",
-            status: paperMeta?.status,
+            status: normalizeReviewStatus(paperMeta?.status),
             submissionDate:
               progress.submission_time ||
               paperMeta?.submission_date ||
@@ -164,7 +142,7 @@ export default function AuthorDashboardPage() {
       .map((paper) => ({
         paperId: paper.id || paper.paper_id,
         title: paper.title_zh || paper.title_en,
-        status: paper.status,
+        status: normalizeReviewStatus(paper.status),
         submissionDate: paper.submission_date,
         currentStage: paper.current_stage,
         currentStageStatus: paper.current_stage ? "处理中" : undefined,
@@ -177,6 +155,24 @@ export default function AuthorDashboardPage() {
       }));
   }, [papers, progressList, paperIndex]);
 
+  if (isLoading) {
+    return (
+      <Stack align="center" justify="center" h="60vh">
+        <Loader size="lg" />
+      </Stack>
+    );
+  }
+
+  const stats = (papers || []).reduce(
+    (acc, paper) => {
+      const status = normalizeReviewStatus(paper.status);
+      acc.total += 1;
+      acc.byStatus[status] = (acc.byStatus[status] || 0) + 1;
+      return acc;
+    },
+    { total: 0, byStatus: {} }
+  );
+
   // “最近进度”按照更新时间排序，前端不做分页，最多展示 5 条。
   return (
     <Stack gap="xl">
@@ -186,9 +182,9 @@ export default function AuthorDashboardPage() {
         {Object.entries(stats.byStatus).map(([status, count]) => (
           <DashboardStat
             key={status}
-            title={`状态：${status}`}
+            title={`评审意见：${getReviewStatusLabel(status)}`}
             value={count}
-            badgeColor={statusColors[status]}
+            badgeColor={getReviewStatusColor(status)}
           />
         ))}
       </SimpleGrid>
@@ -216,11 +212,9 @@ export default function AuthorDashboardPage() {
               <Card key={item.paperId} withBorder radius="md">
                 <Group justify="space-between" mb="xs">
                   <Text fw={600}>{item.title}</Text>
-                  {item.status && (
-                    <Badge color={statusColors[item.status] || "gray"}>
-                      {item.status}
-                    </Badge>
-                  )}
+                  <Badge color={getReviewStatusColor(item.status)}>
+                    {getReviewStatusLabel(item.status)}
+                  </Badge>
                 </Group>
                 {item.currentStage && (
                   <Group gap="xs" mb="xs">
@@ -310,7 +304,7 @@ function DashboardStat({ title, value, badgeColor }) {
         <Text fw={700} fz={28}>
           {value}
         </Text>
-        {badgeColor && <Badge color={badgeColor}>状态统计</Badge>}
+        {badgeColor && <Badge color={badgeColor}>评审意见统计</Badge>}
       </Stack>
     </Card>
   );
