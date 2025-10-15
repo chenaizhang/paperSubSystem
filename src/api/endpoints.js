@@ -23,6 +23,9 @@ export const endpoints = {
     searchEn: '/api/keywords/search/en',
     create: '/api/keywords'
   },
+  funds: {
+    search: '/api/funds/search'
+  },
   papers: {
     base: '/api/papers',
     detail: (id) => `/api/papers/${id}`,

@@ -38,6 +38,7 @@ import {
 } from '../../features/papers/paperSchema.js';
 import AuthorInstitutionInput from '../../components/AuthorInstitutionInput.jsx';
 import KeywordTagsInput from '../../components/KeywordTagsInput.jsx';
+import FundSearch from '../../components/FundSearch.jsx';
 
 const initialValues = {
   title_zh: '',
@@ -61,6 +62,7 @@ export default function AuthorPaperFormPage({ mode }) {
 
   const [uploadProgress, setUploadProgress] = useState(0);
   const [existingFile, setExistingFile] = useState(null);
+  const [fundCodeLocked, setFundCodeLocked] = useState(true);
 
   // 表单实例：依据 mode 加载不同的 Zod schema。
   const form = useForm({
@@ -102,6 +104,8 @@ export default function AuthorPaperFormPage({ mode }) {
         attachment: null
       });
       setExistingFile(paper.attachment_url || null);
+      // 如果已有资助编号，默认锁定编号输入框
+      setFundCodeLocked(Boolean(paper.fund_code));
     }
   });
 
@@ -314,8 +318,26 @@ export default function AuthorPaperFormPage({ mode }) {
                 />
               </SimpleGrid>
               <SimpleGrid cols={{ base: 1, md: 2 }}>
-                <TextInput label="资助基金名称" {...form.getInputProps('fund_name')} />
-                <TextInput label="资助编号" {...form.getInputProps('fund_code')} />
+                <FundSearch
+                  value={form.values.fund_name}
+                  onChange={(v) => {
+                    // 修改名称即认为可能为非数据库中的项目名称：先解锁编号并清空
+                    form.setFieldValue('fund_name', v);
+                    form.setFieldValue('fund_code', '');
+                    setFundCodeLocked(false);
+                  }}
+                  onFundSelect={(fund) => {
+                    form.setFieldValue('fund_code', fund?.project_number || '');
+                    setFundCodeLocked(true);
+                  }}
+                  onExactMatchChange={(isExact) => setFundCodeLocked(isExact)}
+                  error={form.errors.fund_name}
+                />
+                <TextInput
+                  label="资助编号"
+                  {...form.getInputProps('fund_code')}
+                  disabled={fundCodeLocked}
+                />
               </SimpleGrid>
             </Stack>
 
