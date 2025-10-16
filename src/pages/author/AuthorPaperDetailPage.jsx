@@ -41,6 +41,13 @@ export default function AuthorPaperDetailPage() {
   const [revisionFile, setRevisionFile] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const { userId } = useAuth();
+  const { data: profile } = useQuery({
+    queryKey: ['profile'],
+    queryFn: async () => {
+      const response = await api.get(endpoints.users.profile);
+      return response.data;
+    }
+  });
 
   // 单篇论文详情：缓存 key 带上 paperId，方便提交后针对性失效。
   const { data: paper, isLoading } = useQuery({
@@ -123,16 +130,37 @@ export default function AuthorPaperDetailPage() {
   const reviewStatus = normalizeReviewStatus(paper?.status);
   // 仅在小修或大修评审意见下展示上传区，与业务约定保持一致。
   const canSubmitRevision = ['Minor Revision', 'Major Revision'].includes(reviewStatus);
+  const currentAuthorIds = useMemo(() => {
+    const ids = new Set();
+    const add = (val) => {
+      if (val === undefined || val === null || val === '') return;
+      ids.add(String(val));
+    };
+    add(profile?.author_id);
+    add(profile?.default_author_id);
+    const possibleLists = [profile?.authorsList, profile?.authors];
+    possibleLists.forEach((list) => {
+      if (!Array.isArray(list)) return;
+      list.forEach((item) => {
+        add(item?.author_id ?? item?.id);
+      });
+    });
+    return Array.from(ids);
+  }, [profile]);
+  const normalizedUserId = useMemo(() => (userId != null ? String(userId) : null), [userId]);
   const isCorrespondingAuthor = useMemo(() => {
-    if (!paper?.authors || userId == null) {
+    if (!Array.isArray(paper?.authors)) {
       return false;
     }
-    const normalizedUserId = String(userId);
     return paper.authors.some(
       (author) =>
-        author?.is_corresponding && author?.author_id != null && String(author.author_id) === normalizedUserId
+        author?.is_corresponding &&
+        ((author?.author_id != null && currentAuthorIds.includes(String(author.author_id))) ||
+          (author?.user_id != null &&
+            normalizedUserId &&
+            String(author.user_id) === normalizedUserId))
     );
-  }, [paper?.authors, userId]);
+  }, [paper?.authors, currentAuthorIds, normalizedUserId]);
 
   const handleDownload = async () => {
     const parseFilename = (disposition) => {

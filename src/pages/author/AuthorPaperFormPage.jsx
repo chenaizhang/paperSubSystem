@@ -74,13 +74,33 @@ export default function AuthorPaperFormPage({ mode }) {
   });
 
   // 基础资料：自动带出作者本人及单位信息，减少重复输入。
-  const { data: profile } = useQuery({
+  const { data: profile, isLoading: isProfileLoading } = useQuery({
     queryKey: ['profile'],
     queryFn: async () => {
       const response = await api.get(endpoints.users.profile);
       return response.data;
     }
   });
+  const currentAuthorIds = useMemo(() => {
+    const ids = new Set();
+    const add = (val) => {
+      if (val === undefined || val === null || val === '') return;
+      ids.add(String(val));
+    };
+
+    add(profile?.author_id);
+    add(profile?.default_author_id);
+
+    const possibleLists = [profile?.authorsList, profile?.authors];
+    possibleLists.forEach((list) => {
+      if (!Array.isArray(list)) return;
+      list.forEach((item) => {
+        add(item?.author_id ?? item?.id);
+      });
+    });
+
+    return Array.from(ids);
+  }, [profile]);
 
   const { data: paperData, isLoading } = useQuery({
     queryKey: ['paper', paperId],
@@ -186,21 +206,33 @@ export default function AuthorPaperFormPage({ mode }) {
     }
   }, [isEdit, paperId]);
 
+  const normalizedUserId = useMemo(() => (userId != null ? String(userId) : null), [userId]);
+
   useEffect(() => {
-    if (!isEdit || !paperData || userId == null) {
+    if (!isEdit || !paperData) {
       if (!isEdit) {
         setCanEdit(true);
       }
       return;
     }
 
-    const normalizedUserId = String(userId);
+    if (isProfileLoading) {
+      return;
+    }
+
     const correspondingAuthors = Array.isArray(paperData.authors)
       ? paperData.authors.filter((author) => author?.is_corresponding)
       : [];
-    const hasPermission = correspondingAuthors.some(
-      (author) => author?.author_id != null && String(author.author_id) === normalizedUserId
-    );
+
+    const hasPermission =
+      correspondingAuthors.length > 0 &&
+      correspondingAuthors.some((author) => {
+        const authorId = author?.author_id != null ? String(author.author_id) : null;
+        const authorUserId = author?.user_id != null ? String(author.user_id) : null;
+        const matchByAuthorId = authorId && currentAuthorIds.includes(authorId);
+        const matchByUserId = authorUserId && normalizedUserId && authorUserId === normalizedUserId;
+        return matchByAuthorId || matchByUserId;
+      });
 
     setCanEdit(hasPermission);
 
@@ -213,7 +245,15 @@ export default function AuthorPaperFormPage({ mode }) {
       });
       navigate(redirectPath);
     }
-  }, [isEdit, paperData, userId, navigate, paperId]);
+  }, [
+    isEdit,
+    paperData,
+    normalizedUserId,
+    currentAuthorIds,
+    navigate,
+    paperId,
+    isProfileLoading
+  ]);
 
   /**
    * 非编辑态时默认把当前登录作者写入 authors 列表。
