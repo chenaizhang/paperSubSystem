@@ -112,7 +112,7 @@ export default function AuthorInstitutionInput({
               onChange={handleAuthorChange}
               label="作者姓名"
               placeholder="搜索作者姓名或ID"
-              required={index === 0}
+              required
               locked={isAuthorLocked}
               currentUserId={currentUserId}
               isFirstAuthor={isFirstAuthor}
@@ -126,7 +126,7 @@ export default function AuthorInstitutionInput({
               onChange={handleInstitutionChange}
               label="所属单位"
               placeholder="选择工作单位"
-              required={index === 0}
+              required
               disabled={isInstitutionDisabled}
               authorId={value.author_id}
               institutionInfo={value.institution_info}

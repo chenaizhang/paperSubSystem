@@ -12,13 +12,13 @@ const keywordsSchema = z.array(z.string().min(1)).max(8, '关键词不超过8个
 
 const basePaperSchema = z.object({
   title_zh: z.string().min(1, '请输入中文标题'),
-  title_en: z.string().optional(),
+  title_en: z.string().min(1, '请输入英文标题'),
   abstract_zh: z.string().min(1, '请输入中文摘要'),
-  abstract_en: z.string().optional(),
+  abstract_en: z.string().min(1, '请输入英文摘要'),
   keywords_zh: keywordsSchema.min(1, '请输入至少一个中文关键词'),
-  keywords_en: keywordsSchema.optional(),
-  fund_name: z.string().optional(),
-  fund_code: z.string().optional(),
+  keywords_en: keywordsSchema.min(1, '请输入至少一个英文关键词'),
+  fund_name: z.string().min(1, '请输入资助基金名称'),
+  fund_code: z.string().min(1, '请输入资助编号'),
   authors: z
     .array(
       z.object({

@@ -471,7 +471,7 @@ export default function AuthorPaperFormPage({ mode }) {
               <Title order={3}>基本信息</Title>
               <SimpleGrid cols={{ base: 1, md: 2 }}>
                 <TextInput label="中文标题" required {...form.getInputProps('title_zh')} />
-                <TextInput label="英文标题" {...form.getInputProps('title_en')} />
+                <TextInput label="英文标题" required {...form.getInputProps('title_en')} />
               </SimpleGrid>
               <SimpleGrid cols={{ base: 1, md: 2 }}>
                 <Textarea
@@ -483,6 +483,7 @@ export default function AuthorPaperFormPage({ mode }) {
                 <Textarea
                   label="英文摘要"
                   minRows={4}
+                  required
                   {...form.getInputProps('abstract_en')}
                 />
               </SimpleGrid>
@@ -498,7 +499,8 @@ export default function AuthorPaperFormPage({ mode }) {
                 />
                 <KeywordTagsInput
                   label="英文关键词"
-                  description="可选，支持输入联想"
+                  description="1-8 个关键词，支持输入联想"
+                  required
                   type="en"
                   value={form.values.keywords_en}
                   onChange={(vals) => form.setFieldValue('keywords_en', vals)}
@@ -507,6 +509,7 @@ export default function AuthorPaperFormPage({ mode }) {
               </SimpleGrid>
               <SimpleGrid cols={{ base: 1, md: 2 }}>
                 <FundSearch
+                  required
                   value={form.values.fund_name}
                   onChange={(v) => {
                     // 修改名称即认为可能为非数据库中的项目名称：先解锁编号并清空
@@ -523,6 +526,7 @@ export default function AuthorPaperFormPage({ mode }) {
                 />
                 <TextInput
                   label="资助编号"
+                  required
                   {...form.getInputProps('fund_code')}
                   disabled={fundCodeLocked}
                 />
@@ -582,7 +586,7 @@ export default function AuthorPaperFormPage({ mode }) {
               <FileInput
                 label="上传稿件附件"
                 placeholder="选择 PDF 或 Word 文件"
-                required={!isEdit}
+                required
                 accept=".pdf,.doc,.docx"
                 leftSection={<IconUpload size={16} />}
                 value={form.values.attachment}
