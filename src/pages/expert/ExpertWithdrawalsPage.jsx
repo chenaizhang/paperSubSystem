@@ -4,14 +4,14 @@ import {
   Card,
   Group,
   LoadingOverlay,
-  NumberInput,
-  Select,
   Stack,
   Table,
   Text,
   Title,
   Modal,
-  Divider
+  Divider,
+  Badge,
+  TextInput
 } from '@mantine/core';
 import { useState } from 'react';
 import { useForm, zodResolver } from '@mantine/form';
@@ -24,14 +24,31 @@ import { notifications } from '@mantine/notifications';
 import { IconEye } from '@tabler/icons-react';
 
 const schema = z.object({
-  amount: z.coerce.number().gt(0, '请输入提现金额'),
-  bank_account_id: z.string().min(1, '请选择银行卡')
+  assignment_id: z
+    .string()
+    .trim()
+    .min(1, '请输入任务ID')
+    .regex(/^\d+$/, '任务ID必须为整数')
+    .refine((value) => Number(value) > 0, '任务ID必须大于0')
 });
 
 export default function ExpertWithdrawalsPage() {
   const [isDetailOpen, setDetailOpen] = useState(false);
   const [selectedWithdrawal, setSelectedWithdrawal] = useState(null);
   const queryClient = useQueryClient();
+  const getStatusMeta = (status) => {
+    if (status === 1 || status === '1' || status === true) {
+      return { label: '已提现', color: 'green' };
+    }
+    if (status === 0 || status === '0' || status === false) {
+      return { label: '未提现', color: 'red' };
+    }
+    return { label: '处理中', color: 'gray' };
+  };
+  const formatDateTime = (value) => {
+    if (!value) return '—';
+    return dayjs(value).format('YYYY-MM-DD HH:mm:ss');
+  };
 
   const { data: withdrawals, isLoading } = useQuery({
     queryKey: ['withdrawals'],
@@ -41,48 +58,50 @@ export default function ExpertWithdrawalsPage() {
     }
   });
 
-  const { data: profile } = useQuery({
-    queryKey: ['profile'],
-    queryFn: async () => {
-      const response = await api.get(endpoints.users.profile);
-      return response.data;
-    }
-  });
-
   const form = useForm({
     initialValues: {
-      amount: 0,
-      bank_account_id: ''
+      assignment_id: ''
     },
     validate: zodResolver(schema)
   });
 
   const mutation = useMutation({
     mutationFn: async (values) => {
-      const response = await api.post(endpoints.payments.withdrawals, values);
+      const response = await api.post(
+        endpoints.payments.withdrawals,
+        {
+          assignment_id: Number(values.assignment_id)
+        },
+        { suppressDefaultError: true }
+      );
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       notifications.show({
         title: '提现申请成功',
-        message: '管理员将尽快处理',
+        message: data?.message ?? '提现申请提交成功',
         color: 'green'
       });
       form.reset();
       queryClient.invalidateQueries({ queryKey: ['withdrawals'] });
     },
     onError: (error) => {
-      const fieldErrors = error.response?.data?.errors;
+      const data = error.response?.data;
+      const fieldErrors = data?.errors;
+      const serverMessage = data?.message;
       if (fieldErrors) {
         form.setErrors(fieldErrors);
       }
+      if (serverMessage) {
+        form.setFieldError('assignment_id', serverMessage);
+        notifications.show({
+          title: '提现申请失败',
+          message: serverMessage,
+          color: 'red'
+        });
+      }
     }
   });
-
-  const bankOptions = (profile?.bank_accounts || []).map((account) => ({
-    value: String(account.id || account.bank_account_id),
-    label: `${account.bank_name || ''} - ${account.account_holder || ''}`
-  }));
 
   return (
     <Stack>
@@ -91,19 +110,13 @@ export default function ExpertWithdrawalsPage() {
         <form onSubmit={form.onSubmit((values) => mutation.mutate(values))}>
           <Stack gap="md">
             <Group gap="md">
-              <NumberInput
-                label="提现金额"
-                min={0}
-                precision={2}
+              <TextInput
+                label="任务ID"
                 withAsterisk
-                {...form.getInputProps('amount')}
-              />
-              <Select
-                label="提现银行卡"
-                placeholder="选择银行卡"
-                data={bankOptions}
-                withAsterisk
-                {...form.getInputProps('bank_account_id')}
+                placeholder="请输入任务ID"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                {...form.getInputProps('assignment_id')}
               />
             </Group>
             <Group justify="flex-end">
@@ -137,12 +150,17 @@ export default function ExpertWithdrawalsPage() {
                 <Table.Td>{item.assignment_id || '—'}</Table.Td>
                 <Table.Td>{item.paper_id || '—'}</Table.Td>
                 <Table.Td>{item.amount}</Table.Td>
-                <Table.Td>{item.status ?? '处理中'}</Table.Td>
                 <Table.Td>
-                  {item.request_date || item.withdrawal_date
-                    ? dayjs(item.request_date || item.withdrawal_date).format('YYYY-MM-DD')
-                    : '—'}
+                  {(() => {
+                    const { label, color } = getStatusMeta(item.status);
+                    return (
+                      <Badge color={color} variant="outline">
+                        {label}
+                      </Badge>
+                    );
+                  })()}
                 </Table.Td>
+                <Table.Td>{formatDateTime(item.request_date || item.withdrawal_date)}</Table.Td>
                 <Table.Td>
                   <ActionIcon
                     variant="light"
@@ -197,17 +215,18 @@ export default function ExpertWithdrawalsPage() {
             </Group>
             <Group justify="space-between">
               <Text fw={500}>状态</Text>
-              <Text>{selectedWithdrawal.status ?? '处理中'}</Text>
+              {(() => {
+                const { label, color } = getStatusMeta(selectedWithdrawal.status);
+                return (
+                  <Badge color={color} variant="outline">
+                    {label}
+                  </Badge>
+                );
+              })()}
             </Group>
             <Group justify="space-between">
               <Text fw={500}>申请日期</Text>
-              <Text>
-                {selectedWithdrawal.request_date || selectedWithdrawal.withdrawal_date
-                  ? dayjs(selectedWithdrawal.request_date || selectedWithdrawal.withdrawal_date).format(
-                      'YYYY-MM-DD'
-                    )
-                  : '—'}
-              </Text>
+              <Text>{formatDateTime(selectedWithdrawal.request_date || selectedWithdrawal.withdrawal_date)}</Text>
             </Group>
           </Stack>
         )}

@@ -39,7 +39,7 @@ api.interceptors.response.use(
       if (!window.location.pathname.startsWith('/login')) {
         window.location.href = '/login';
       }
-    } else {
+    } else if (!error.config?.suppressDefaultError) {
       notifications.show({
         title: '请求失败',
         message,
