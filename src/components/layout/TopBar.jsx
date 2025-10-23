@@ -17,7 +17,7 @@ import { endpoints } from '../../api/endpoints.js';
 import { useAuth } from '../../features/auth/AuthProvider.jsx';
 import { useTheme } from '../ThemeProvider.jsx';
 
-export function TopBar({ opened, onToggle }) {
+export function TopBar({ opened = false, onToggle = () => {} }) {
   const navigate = useNavigate();
   const { colorScheme, toggleColorScheme } = useTheme();
   const { role, logout } = useAuth();
@@ -98,9 +98,4 @@ export function TopBar({ opened, onToggle }) {
 TopBar.propTypes = {
   opened: PropTypes.bool,
   onToggle: PropTypes.func
-};
-
-TopBar.defaultProps = {
-  opened: false,
-  onToggle: () => {}
 };

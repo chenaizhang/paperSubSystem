@@ -28,7 +28,7 @@ const baseItems = [
   }
 ];
 
-export function SideNav({ onNavigate }) {
+export function SideNav({ onNavigate = () => {} }) {
   const { role } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -127,8 +127,4 @@ export function SideNav({ onNavigate }) {
 
 SideNav.propTypes = {
   onNavigate: PropTypes.func
-};
-
-SideNav.defaultProps = {
-  onNavigate: () => {}
 };

@@ -3,7 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../features/auth/AuthProvider.jsx';
 import { ForbiddenPage } from '../pages/status/ForbiddenPage.jsx';
 
-export function ProtectedRoute({ roles, children }) {
+export function ProtectedRoute({ roles = [], children }) {
   const { isAuthenticated, role } = useAuth();
   const location = useLocation();
 
@@ -21,8 +21,4 @@ export function ProtectedRoute({ roles, children }) {
 ProtectedRoute.propTypes = {
   roles: PropTypes.arrayOf(PropTypes.string),
   children: PropTypes.node.isRequired
-};
-
-ProtectedRoute.defaultProps = {
-  roles: []
 };

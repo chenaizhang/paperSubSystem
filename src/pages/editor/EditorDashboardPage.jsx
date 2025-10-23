@@ -14,6 +14,19 @@ import { endpoints } from '../../api/endpoints.js';
 import dayjs from 'dayjs';
 import PropTypes from 'prop-types';
 
+function ensureArray(payload) {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+  if (payload && typeof payload === 'object') {
+    if (Array.isArray(payload.items)) return payload.items;
+    if (Array.isArray(payload.data)) return payload.data;
+    if (Array.isArray(payload.results)) return payload.results;
+    if (Array.isArray(payload.list)) return payload.list;
+  }
+  return [];
+}
+
 export default function EditorDashboardPage() {
   const { data: papers, isLoading } = useQuery({
     queryKey: ['papers', 'editor'],
@@ -31,6 +44,9 @@ export default function EditorDashboardPage() {
     }
   });
 
+  const paperList = ensureArray(papers);
+  const withdrawalList = ensureArray(withdrawals);
+
   if (isLoading) {
     return (
       <Stack align="center" justify="center" h="60vh">
@@ -39,11 +55,12 @@ export default function EditorDashboardPage() {
     );
   }
 
-  const pendingAssignments = (papers || []).filter((paper) => paper.status === 'initial_review');
-  const newSubmissions = (papers || []).filter((paper) =>
-    dayjs().diff(dayjs(paper.submission_date), 'day') <= 7
-  );
-  const awaitingSchedule = (papers || []).filter((paper) => paper.status === 'accepted');
+  const pendingAssignments = paperList.filter((paper) => paper.status === 'initial_review');
+  const newSubmissions = paperList.filter((paper) => {
+    if (!paper.submission_date) return false;
+    return dayjs().diff(dayjs(paper.submission_date), 'day') <= 7;
+  });
+  const awaitingSchedule = paperList.filter((paper) => paper.status === 'accepted');
 
   return (
     <Stack gap="xl">
@@ -60,7 +77,7 @@ export default function EditorDashboardPage() {
             待处理提现
           </Title>
           <Stack gap="sm">
-            {(withdrawals || [])
+            {withdrawalList
               .filter((item) => item.status === 'Pending')
               .slice(0, 5)
               .map((item) => (
@@ -76,7 +93,7 @@ export default function EditorDashboardPage() {
                   </Group>
                 </Card>
               ))}
-            {(withdrawals || []).filter((item) => item.status === 'Pending').length === 0 && (
+            {withdrawalList.filter((item) => item.status === 'Pending').length === 0 && (
               <Text>暂无待处理提现。</Text>
             )}
           </Stack>

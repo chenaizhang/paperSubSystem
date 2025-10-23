@@ -7,6 +7,7 @@ export const endpoints = {
     profile: '/api/users/profile',
     authors: '/api/users/authors',
     experts: '/api/users/experts',
+    searchExperts: '/api/users/search-experts',
     search: '/api/users/search'
   },
   institutions: {
@@ -36,9 +37,9 @@ export const endpoints = {
     progressList: '/api/papers/progress'
   },
   reviews: {
-    assign: '/api/reviews/assign',
     assignments: '/api/reviews/assignments',
     assignment: (id) => `/api/reviews/assignments/${id}`,
+    paperExperts: (paperId) => `/api/reviews/papers/${paperId}/expert`,
     comments: (paperId) => `/api/reviews/papers/${paperId}/comments`,
     submit: '/api/reviews/submit'
   },

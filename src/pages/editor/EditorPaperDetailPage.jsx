@@ -3,6 +3,7 @@ import {
   Button,
   Card,
   Group,
+  Highlight,
   LoadingOverlay,
   Modal,
   MultiSelect,
@@ -16,7 +17,7 @@ import {
   Title,
 } from "@mantine/core";
 import { DatePickerInput } from "@mantine/dates";
-import { IconDownload, IconSend } from "@tabler/icons-react";
+import { IconCheck, IconDownload, IconSend } from "@tabler/icons-react";
 import { useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../../api/axios.js";
@@ -25,16 +26,17 @@ import dayjs from "dayjs";
 import { notifications } from "@mantine/notifications";
 import { useForm, zodResolver } from "@mantine/form";
 import { z } from "zod";
-import { useDisclosure } from "@mantine/hooks";
+import { useDebouncedValue, useDisclosure } from "@mantine/hooks";
 import { useMemo, useState } from "react";
 import {
   getIntegrityStatusColor,
   getIntegrityStatusLabel,
   isIntegrityWaiting,
 } from "../../utils/integrityStatus.js";
+import { getProgressStatusLabel } from "../../utils/progressStatus.js";
 
 const assignSchema = z.object({
-  experts: z.array(z.string()).min(1, "请选择专家").max(3, "最多选择3位专家"),
+  experts: z.array(z.string()).length(3, "必须一次性选择3位专家"),
   due_date: z.date({ required_error: "请选择截止日期" }),
 });
 
@@ -53,6 +55,45 @@ const notificationTypes = [
   { label: "支付确认", value: "Payment Confirmation" },
 ];
 
+const mapExpertToOption = (expert) => {
+  if (!expert) {
+    return null;
+  }
+  const id = expert.expert_id ?? expert.id ?? expert.user_id ?? expert.userId;
+  if (id === undefined || id === null) {
+    return null;
+  }
+  const value = String(id);
+  if (!value) {
+    return null;
+  }
+  const rawName =
+    expert.name ??
+    expert.expert_name ??
+    expert.full_name ??
+    expert.username ??
+    "";
+  const name = String(rawName || `专家 ${value}`);
+  const researchAreas =
+    expert.research_areas ??
+    expert.researchAreas ??
+    expert.research_area ??
+    expert.field ??
+    expert.fields ??
+    "";
+  const title =
+    expert.title ?? expert.job_title ?? expert.position ?? expert.role ?? "";
+  const detailParts = [title, researchAreas]
+    .map((part) => (part ? String(part).trim() : ""))
+    .filter((part) => part.length > 0);
+  return {
+    value,
+    label: name,
+    detail: detailParts.join(" · "),
+    id,
+  };
+};
+
 export default function EditorPaperDetailPage() {
   const { paperId } = useParams();
   const queryClient = useQueryClient();
@@ -67,14 +108,6 @@ export default function EditorPaperDetailPage() {
     },
   });
 
-  const { data: experts } = useQuery({
-    queryKey: ["experts"],
-    queryFn: async () => {
-      const response = await api.get(endpoints.users.experts);
-      return response.data ?? [];
-    },
-  });
-
   const { data: comments } = useQuery({
     queryKey: ["review-comments", paperId],
     queryFn: async () => {
@@ -82,6 +115,78 @@ export default function EditorPaperDetailPage() {
       return response.data ?? [];
     },
   });
+  const { data: assignmentInfo, isLoading: isAssignmentInfoLoading } = useQuery(
+    {
+      queryKey: ["paper-experts", paperId],
+      enabled: Boolean(paperId),
+      queryFn: async () => {
+        const response = await api.get(endpoints.reviews.paperExperts(paperId));
+        return response.data;
+      },
+    }
+  );
+  const assignedExperts = assignmentInfo?.experts ?? [];
+  const [expertSearch, setExpertSearch] = useState("");
+  const [debouncedExpertSearch] = useDebouncedValue(expertSearch, 300);
+  const normalizedExpertSearch = debouncedExpertSearch.trim();
+  const { data: searchedExperts = [], isFetching: isSearchingExperts } =
+    useQuery({
+      queryKey: ["search-experts", normalizedExpertSearch],
+      enabled: normalizedExpertSearch.length > 0,
+      queryFn: async () => {
+        const response = await api.get(endpoints.users.searchExperts, {
+          params: {
+            query: normalizedExpertSearch,
+            page: 1,
+            limit: 10,
+          },
+        });
+        const payload = response.data;
+        if (Array.isArray(payload?.experts)) {
+          return payload.experts;
+        }
+        if (Array.isArray(payload)) {
+          return payload;
+        }
+        return [];
+      },
+    });
+  const assignedExpertOptions = useMemo(() => {
+    if (!Array.isArray(assignedExperts)) {
+      return [];
+    }
+    const map = new Map();
+    assignedExperts.forEach((expert) => {
+      const option = mapExpertToOption(expert);
+      if (option && !map.has(option.value)) {
+        map.set(option.value, { ...option, source: "assigned" });
+      }
+    });
+    return Array.from(map.values());
+  }, [assignedExperts]);
+  const searchedExpertOptions = useMemo(() => {
+    if (!Array.isArray(searchedExperts)) {
+      return [];
+    }
+    const map = new Map();
+    searchedExperts.forEach((expert) => {
+      const option = mapExpertToOption(expert);
+      if (option && !map.has(option.value)) {
+        map.set(option.value, { ...option, source: "search" });
+      }
+    });
+    return Array.from(map.values());
+  }, [searchedExperts]);
+  const expertOptions = useMemo(() => {
+    const map = new Map();
+    assignedExpertOptions.forEach((option) => map.set(option.value, option));
+    searchedExpertOptions.forEach((option) => map.set(option.value, option));
+    return Array.from(map.values());
+  }, [assignedExpertOptions, searchedExpertOptions]);
+  const highlightTerms = useMemo(() => {
+    const trimmed = expertSearch.trim();
+    return trimmed.length > 0 ? trimmed.split(/\s+/).filter(Boolean) : [];
+  }, [expertSearch]);
 
   const integrityMutation = useMutation({
     mutationFn: async (integrity) => {
@@ -121,14 +226,12 @@ export default function EditorPaperDetailPage() {
   const assignMutation = useMutation({
     mutationFn: async (values) => {
       const due = dayjs(values.due_date).format("YYYY-MM-DD");
-      const requests = values.experts.map((expertId) =>
-        api.post(endpoints.reviews.assign, {
-          paper_id: Number(paperId),
-          expert_id: Number(expertId),
-          assigned_due_date: due,
-        })
-      );
-      await Promise.all(requests);
+      const payload = values.experts.map((expertId) => ({
+        paper_id: Number(paperId),
+        expert_id: Number(expertId),
+        assigned_due_date: due,
+      }));
+      await api.post(endpoints.reviews.assignments, payload);
     },
     onSuccess: () => {
       notifications.show({
@@ -137,7 +240,19 @@ export default function EditorPaperDetailPage() {
         color: "green",
       });
       assignForm.reset();
+      setExpertSearch("");
       queryClient.invalidateQueries({ queryKey: ["review-comments", paperId] });
+      queryClient.invalidateQueries({ queryKey: ["paper-experts", paperId] });
+    },
+    onError: (error) => {
+      notifications.show({
+        title: "分配失败",
+        message:
+          error?.response?.data?.message ||
+          error?.friendlyMessage ||
+          "无法分配审稿任务，请稍后再试",
+        color: "red",
+      });
     },
   });
 
@@ -196,7 +311,9 @@ export default function EditorPaperDetailPage() {
 
   const normalizeKeywords = (list) => {
     if (!Array.isArray(list)) return [];
-    return list.map((item) => (Array.isArray(item) ? item[1] : item)).filter(Boolean);
+    return list
+      .map((item) => (Array.isArray(item) ? item[1] : item))
+      .filter(Boolean);
   };
 
   const handleDownload = async () => {
@@ -232,11 +349,18 @@ export default function EditorPaperDetailPage() {
 
     try {
       setIsDownloading(true);
-      const resp = await api.get(endpoints.papers.download(paperId), { responseType: "blob" });
+      const resp = await api.get(endpoints.papers.download(paperId), {
+        responseType: "blob",
+      });
       const disposition =
-        resp.headers["content-disposition"] || resp.headers["Content-Disposition"];
+        resp.headers["content-disposition"] ||
+        resp.headers["Content-Disposition"];
       const blob = resp.data;
-      const mime = blob?.type || resp.headers["content-type"] || resp.headers["Content-Type"] || "";
+      const mime =
+        blob?.type ||
+        resp.headers["content-type"] ||
+        resp.headers["Content-Type"] ||
+        "";
 
       let filename = parseFilename(disposition) || `paper-${paperId}`;
       if (!/\.[a-z0-9]+$/i.test(filename)) {
@@ -255,7 +379,10 @@ export default function EditorPaperDetailPage() {
     } catch (error) {
       notifications.show({
         title: "下载失败",
-        message: error?.response?.data?.message || error?.friendlyMessage || "文件下载失败",
+        message:
+          error?.response?.data?.message ||
+          error?.friendlyMessage ||
+          "文件下载失败",
         color: "red",
       });
     } finally {
@@ -276,11 +403,6 @@ export default function EditorPaperDetailPage() {
               ? dayjs(paper.submission_date).format("YYYY-MM-DD")
               : "—"}
           </Text>
-          {paper?.title_en && (
-            <Text size="sm" c="dimmed">
-              英文标题：{paper.title_en}
-            </Text>
-          )}
         </div>
         <Button
           leftSection={<IconDownload size={16} />}
@@ -296,10 +418,9 @@ export default function EditorPaperDetailPage() {
         <LoadingOverlay visible={isLoading} overlayProps={{ blur: 2 }} />
         <Stack gap="md">
           <Group gap="xs">
-            <Badge color="blue">{paper?.status}</Badge>
-            {paper?.integrity && (
-              <Badge color={getIntegrityStatusColor(paper.integrity)}>
-                {getIntegrityStatusLabel(paper.integrity)}
+            {paper && (
+              <Badge color="blue">
+                {getProgressStatusLabel(paper.progress)}
               </Badge>
             )}
           </Group>
@@ -350,7 +471,12 @@ export default function EditorPaperDetailPage() {
               </Table.Thead>
               <Table.Tbody>
                 {paper.funds.map((fund) => (
-                  <Table.Tr key={fund.fund_id || `${fund.project_name}-${fund.project_number}`}>
+                  <Table.Tr
+                    key={
+                      fund.fund_id ||
+                      `${fund.project_name}-${fund.project_number}`
+                    }
+                  >
                     <Table.Td>{fund.project_name || "—"}</Table.Td>
                     <Table.Td>{fund.project_number || "—"}</Table.Td>
                   </Table.Tr>
@@ -418,10 +544,19 @@ export default function EditorPaperDetailPage() {
         </Stack>
       </Card>
 
-      <Card withBorder shadow="sm">
+      <Card withBorder shadow="sm" pos="relative">
+        <LoadingOverlay
+          visible={isAssignmentInfoLoading}
+          overlayProps={{ blur: 2 }}
+        />
         <Title order={4} mb="md">
           分配审稿专家
         </Title>
+        {!isAssignmentInfoLoading && assignmentInfo?.editable === false && (
+          <Text size="sm" c="dimmed" mb="sm">
+            当前论文不允许继续分配审稿专家。
+          </Text>
+        )}
         <form
           onSubmit={assignForm.onSubmit((values) =>
             assignMutation.mutate(values)
@@ -429,16 +564,82 @@ export default function EditorPaperDetailPage() {
         >
           <Stack gap="md">
             <MultiSelect
-              label="选择专家（最多3位）"
-              data={(experts || []).map((expert) => ({
-                value: String(expert.expert_id || expert.id),
-                label: `${expert.name} / ${expert.research_areas || ""}`,
-              }))}
+              label="选择专家（需选择3位）"
+              data={expertOptions}
+              searchValue={expertSearch}
+              onSearchChange={(value) => setExpertSearch(value || "")}
               value={assignForm.values.experts}
               onChange={(value) => assignForm.setFieldValue("experts", value)}
               searchable
-              placeholder="输入姓名或研究方向"
+              placeholder="输入专家ID、姓名或研究领域"
               error={assignForm.errors.experts}
+              maxValues={3}
+              nothingFound={
+                expertSearch.trim().length > 0
+                  ? "未找到相关专家"
+                  : "请输入ID、姓名或研究领域搜索"
+              }
+              loading={isSearchingExperts}
+              withCheckIcon={false}
+              filter={({ options, search }) => {
+                if (!search) {
+                  return options;
+                }
+                const terms = search
+                  .toLowerCase()
+                  .split(/\s+/)
+                  .filter(Boolean);
+                if (terms.length === 0) {
+                  return options;
+                }
+                return options.filter((option) => {
+                  if (option.source === "search") {
+                    return true;
+                  }
+                  const haystack = [
+                    option.label,
+                    option.detail,
+                    option.id ? `#${option.id}` : "",
+                  ]
+                    .join(" ")
+                    .toLowerCase();
+                  return terms.every((term) => haystack.includes(term));
+                });
+              }}
+              renderOption={({ option, checked }) => (
+                <Group
+                  justify="space-between"
+                  gap="sm"
+                  wrap="nowrap"
+                  style={{ width: "100%" }}
+                >
+                  <div>
+                    <Highlight highlight={highlightTerms}>
+                      {option.label}
+                    </Highlight>
+                    {option.detail && (
+                      <Text size="xs" c="dimmed">
+                        <Highlight highlight={highlightTerms}>
+                          {option.detail}
+                        </Highlight>
+                      </Text>
+                    )}
+                  </div>
+                  <Group gap={4} wrap="nowrap">
+                    {option.id !== undefined && option.id !== null && (
+                      <Badge size="xs" variant="light">
+                        #{option.id}
+                      </Badge>
+                    )}
+                    {checked && <IconCheck size={14} />}
+                  </Group>
+                </Group>
+              )}
+              disabled={
+                isAssignmentInfoLoading ||
+                assignmentInfo?.editable === false ||
+                assignMutation.isPending
+              }
             />
             <DatePickerInput
               label="审稿截止日期"
@@ -446,14 +647,47 @@ export default function EditorPaperDetailPage() {
               onChange={(value) => assignForm.setFieldValue("due_date", value)}
               error={assignForm.errors.due_date}
               minDate={dayjs().add(1, "day").toDate()}
+              disabled={
+                isAssignmentInfoLoading ||
+                assignmentInfo?.editable === false ||
+                assignMutation.isPending
+              }
             />
             <Group justify="flex-end">
-              <Button type="submit" loading={assignMutation.isPending}>
+              <Button
+                type="submit"
+                loading={assignMutation.isPending}
+                disabled={
+                  isAssignmentInfoLoading ||
+                  assignmentInfo?.editable === false ||
+                  assignForm.values.experts.length !== 3 ||
+                  !assignForm.values.due_date
+                }
+              >
                 分配审稿
               </Button>
             </Group>
           </Stack>
         </form>
+        {assignedExperts.length > 0 && (
+          <Stack gap="xs" mt="md">
+            <Text size="sm" fw={600}>
+              已分配专家
+            </Text>
+            {assignedExperts.map((assignment) => (
+              <Text
+                size="sm"
+                key={assignment.assignment_id || assignment.expert_id}
+              >
+                {assignment.expert_name || assignment.expert_id}（截止：
+                {assignment.assigned_due_date
+                  ? dayjs(assignment.assigned_due_date).format("YYYY-MM-DD")
+                  : "—"}
+                ）
+              </Text>
+            ))}
+          </Stack>
+        )}
       </Card>
 
       <Card withBorder shadow="sm">
