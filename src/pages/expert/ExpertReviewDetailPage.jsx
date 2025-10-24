@@ -245,7 +245,9 @@ export default function ExpertReviewDetailPage() {
   return (
     <Stack>
       <Group justify="space-between">
-        <Title order={2}>{assignment?.title_zh || paper?.title_zh || "—"}</Title>
+        <Title order={2}>
+          {assignment?.title_zh || paper?.title_zh || "—"}
+        </Title>
         <Button variant="light" onClick={() => navigate(-1)}>
           返回列表
         </Button>

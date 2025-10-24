@@ -6,53 +6,60 @@ import {
   SimpleGrid,
   Stack,
   Text,
-  Title
-} from '@mantine/core';
-import { useQuery } from '@tanstack/react-query';
-import api from '../../api/axios.js';
-import { endpoints } from '../../api/endpoints.js';
-import dayjs from 'dayjs';
-import PropTypes from 'prop-types';
+  Title,
+} from "@mantine/core";
+import { useQuery } from "@tanstack/react-query";
+import api from "../../api/axios.js";
+import { endpoints } from "../../api/endpoints.js";
+import dayjs from "dayjs";
+import PropTypes from "prop-types";
 
 const statusLabelMap = {
-  Assigned: '待审中',
-  Pending: '待审中',
-  Overdue: '已逾期',
-  Completed: '已完成'
+  Assigned: "待审中",
+  Pending: "待审中",
+  Overdue: "已逾期",
+  Completed: "已完成",
 };
 
 const statusColorMap = {
-  Assigned: 'orange',
-  Pending: 'orange',
-  Overdue: 'red',
-  Completed: 'green'
+  Assigned: "orange",
+  Pending: "orange",
+  Overdue: "red",
+  Completed: "green",
 };
 
-const formatDate = (value, format = 'YYYY-MM-DD') =>
-  value ? dayjs(value).format(format) : '—';
+const formatDate = (value, format = "YYYY-MM-DD") =>
+  value ? dayjs(value).format(format) : "—";
 
-const isPendingStatus = (status) => ['assigned', 'pending', 'overdue'].includes((status || '').toLowerCase());
+const isPendingStatus = (status) =>
+  ["assigned", "pending", "overdue"].includes((status || "").toLowerCase());
 
 export default function ExpertDashboardPage() {
   const { data: assignments, isLoading } = useQuery({
-    queryKey: ['reviews', 'assignments'],
+    queryKey: ["reviews", "assignments"],
     queryFn: async () => {
       const response = await api.get(endpoints.reviews.assignments);
       return response.data ?? [];
-    }
+    },
   });
 
-  const pendingAssignments = (assignments || []).filter((item) => isPendingStatus(item.status));
-
-  const acceptedCount = (assignments || []).filter((item) => item.conclusion === 'Accept').length;
+  const pendingAssignments = (assignments || []).filter((item) =>
+    isPendingStatus(item.status)
+  );
 
   const { data: withdrawals } = useQuery({
-    queryKey: ['withdrawals'],
+    queryKey: ["withdrawals"],
     queryFn: async () => {
       const response = await api.get(endpoints.payments.withdrawals);
       return response.data ?? [];
-    }
+    },
   });
+
+  const pendingWithdrawalAmount = (withdrawals || []).reduce((sum, item) => {
+    const s = item?.status;
+    const isUnwithdrawn = s === false || s === 0 || s === "0";
+    return isUnwithdrawn ? sum + (Number(item?.amount) || 0) : sum;
+  }, 0);
 
   if (isLoading) {
     return (
@@ -66,9 +73,22 @@ export default function ExpertDashboardPage() {
     <Stack gap="xl">
       <Title order={2}>专家仪表盘</Title>
       <SimpleGrid cols={{ base: 1, md: 3 }}>
-        <DashboardCard title="待审任务" value={pendingAssignments.length} color="orange" />
-        <DashboardCard title="已完成任务" value={(assignments || []).length - pendingAssignments.length} color="green" />
-        <DashboardCard title="录用建议数" value={acceptedCount} color="blue" />
+        <DashboardCard
+          title="待审任务"
+          value={pendingAssignments.length}
+          color="orange"
+        />
+        <DashboardCard
+          title="已完成任务"
+          value={(assignments || []).length - pendingAssignments.length}
+          color="green"
+        />
+
+        <DashboardCard
+          title="待提现金额"
+          value={pendingWithdrawalAmount}
+          color="blue"
+        />
       </SimpleGrid>
 
       <Card withBorder shadow="sm">
@@ -80,7 +100,9 @@ export default function ExpertDashboardPage() {
             <Card key={assignment.assignment_id} withBorder>
               <Group justify="space-between">
                 <div>
-                  <Text fw={600}>{assignment.title_zh || assignment.title_en || '—'}</Text>
+                  <Text fw={600}>
+                    {assignment.title_zh || assignment.title_en || "—"}
+                  </Text>
                   <Text size="sm" c="dimmed">
                     指派时间：{formatDate(assignment.assigned_date)}
                   </Text>
@@ -88,37 +110,13 @@ export default function ExpertDashboardPage() {
                     截止时间：{formatDate(assignment.assigned_due_date)}
                   </Text>
                 </div>
-                <Badge color={statusColorMap[assignment.status] || 'orange'}>
-                  {statusLabelMap[assignment.status] || '待审中'}
+                <Badge color={statusColorMap[assignment.status] || "orange"}>
+                  {statusLabelMap[assignment.status] || "待审中"}
                 </Badge>
               </Group>
             </Card>
           ))}
           {pendingAssignments.length === 0 && <Text>暂无待审任务。</Text>}
-        </Stack>
-      </Card>
-
-      <Card withBorder shadow="sm">
-        <Title order={4} mb="md">
-          提现记录
-        </Title>
-        <Stack gap="sm">
-          {(withdrawals || []).slice(0, 5).map((item) => (
-            <Card key={item.withdrawal_id} withBorder>
-              <Group justify="space-between">
-                <div>
-                  <Text fw={600}>金额：{item.amount}</Text>
-                  <Text size="sm" c="dimmed">
-                    申请时间：{item.request_date ? dayjs(item.request_date).format('YYYY-MM-DD') : '—'}
-                  </Text>
-                </div>
-                <Badge color={item.status === 'Approved' ? 'green' : 'gray'}>
-                  {item.status || '处理中'}
-                </Badge>
-              </Group>
-            </Card>
-          ))}
-          {(withdrawals || []).length === 0 && <Text>暂无提现记录。</Text>}
         </Stack>
       </Card>
     </Stack>
@@ -142,5 +140,5 @@ function DashboardCard({ title, value, color }) {
 DashboardCard.propTypes = {
   title: PropTypes.string.isRequired,
   value: PropTypes.number.isRequired,
-  color: PropTypes.string.isRequired
+  color: PropTypes.string.isRequired,
 };

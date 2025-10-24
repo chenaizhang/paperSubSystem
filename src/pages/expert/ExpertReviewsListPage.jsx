@@ -77,7 +77,11 @@ export default function ExpertReviewsListPage() {
           <Table.Td>{assignment.title_zh || assignment.title_en || '—'}</Table.Td>
           <Table.Td>{formatDate(assignment.assigned_date)}</Table.Td>
           <Table.Td>{formatDate(assignment.assigned_due_date)}</Table.Td>
-          <Table.Td>{formatDate(assignment.submission_date, 'YYYY-MM-DD HH:mm')}</Table.Td>
+          <Table.Td>
+            <Badge color={assignment.is_read ? 'green' : 'red'} variant="light">
+              {assignment.is_read ? '已读' : '未读'}
+            </Badge>
+          </Table.Td>
           <Table.Td>{conclusionLabelMap[assignment.conclusion] || assignment.conclusion || '—'}</Table.Td>
           <Table.Td>
             <Badge color={statusColorMap[assignment.status] || 'gray'}>
@@ -126,7 +130,7 @@ export default function ExpertReviewsListPage() {
                 <Table.Th style={{ minWidth: 240 }}>论文标题</Table.Th>
                 <Table.Th style={{ width: 140 }}>指派日期</Table.Th>
                 <Table.Th style={{ width: 140 }}>截止日期</Table.Th>
-                <Table.Th style={{ width: 180 }}>提交时间</Table.Th>
+                <Table.Th style={{ width: 120 }}>阅读状态</Table.Th>
                 <Table.Th style={{ width: 120 }}>审稿结论</Table.Th>
                 <Table.Th style={{ width: 120 }}>状态</Table.Th>
                 <Table.Th style={{ width: 80 }}>操作</Table.Th>
