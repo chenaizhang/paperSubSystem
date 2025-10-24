@@ -49,6 +49,30 @@ export default function ExpertReviewDetailPage() {
     (item) => String(item.assignment_id) === String(assignmentId)
   );
 
+  const markReadMutation = useMutation({
+    mutationFn: async (id) => {
+      await api.put(endpoints.reviews.assignmentMarkRead(id));
+    },
+    onSuccess: (_, id) => {
+      queryClient.setQueryData(["reviews", "assignments"], (old) => {
+        if (!Array.isArray(old)) return old;
+        return old.map((item) =>
+          String(item.assignment_id) === String(id)
+            ? { ...item, is_read: true }
+            : item
+        );
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["reviews", "assignments"],
+        exact: false,
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["unread-indicator"],
+        exact: false,
+      });
+    },
+  });
+
   // 论文详情：用于展示更完整的信息与时间
   const paperId = assignment?.paper_id;
   const { data: paper } = useQuery({
@@ -151,6 +175,17 @@ export default function ExpertReviewDetailPage() {
       });
     }
   }, [myComment]);
+
+  useEffect(() => {
+    if (
+      !assignment?.assignment_id ||
+      assignment.is_read ||
+      markReadMutation.isPending
+    ) {
+      return;
+    }
+    markReadMutation.mutate(assignment.assignment_id);
+  }, [assignment, markReadMutation]);
 
   const handleSubmitReview = form.onSubmit((values) => {
     submitMutation.mutate(values);

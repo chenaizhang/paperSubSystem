@@ -39,6 +39,7 @@ export const endpoints = {
   reviews: {
     assignments: "/api/reviews/assignments",
     assignment: (id) => `/api/reviews/assignments/${id}`,
+    assignmentMarkRead: (id) => `/api/reviews/assignments/${id}/read`,
     paperExperts: (paperId) => `/api/reviews/papers/${paperId}/expert`,
     comments: (paperId) => `/api/reviews/papers/${paperId}/comments`,
     submit: "/api/reviews/submit",

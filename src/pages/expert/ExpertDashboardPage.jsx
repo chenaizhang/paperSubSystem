@@ -60,6 +60,9 @@ export default function ExpertDashboardPage() {
     const isUnwithdrawn = s === false || s === 0 || s === "0";
     return isUnwithdrawn ? sum + (Number(item?.amount) || 0) : sum;
   }, 0);
+  const pendingWithdrawalAmountDisplay = Number.isFinite(pendingWithdrawalAmount)
+    ? pendingWithdrawalAmount.toFixed(2)
+    : "0.00";
 
   if (isLoading) {
     return (
@@ -86,7 +89,7 @@ export default function ExpertDashboardPage() {
 
         <DashboardCard
           title="待提现金额"
-          value={pendingWithdrawalAmount}
+          value={pendingWithdrawalAmountDisplay}
           color="blue"
         />
       </SimpleGrid>
@@ -139,6 +142,6 @@ function DashboardCard({ title, value, color }) {
 
 DashboardCard.propTypes = {
   title: PropTypes.string.isRequired,
-  value: PropTypes.number.isRequired,
+  value: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
   color: PropTypes.string.isRequired,
 };
