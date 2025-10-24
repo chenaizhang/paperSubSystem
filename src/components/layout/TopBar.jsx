@@ -22,14 +22,21 @@ export function TopBar({ opened = false, onToggle = () => {} }) {
   const { colorScheme, toggleColorScheme } = useTheme();
   const { role, logout } = useAuth();
   const { data: unreadCount } = useQuery({
-    queryKey: ['notifications', 'unread-count', role],
-    enabled: role === 'author',
+    queryKey: ['unread-indicator', role],
+    enabled: role === 'author' || role === 'expert',
     queryFn: async () => {
-      const { data } = await api.get(endpoints.notifications.author, {
-        params: { pageSize: 50 }
-      });
-      const list = data?.items ?? data ?? [];
-      return list.filter((item) => item.is_read === false || item.is_read === 0).length;
+      if (role === 'author') {
+        const { data } = await api.get(endpoints.notifications.author, {
+          params: { pageSize: 50 }
+        });
+        const list = data?.items ?? data ?? [];
+        return list.filter((item) => item.is_read === false || item.is_read === 0).length;
+      }
+      if (role === 'expert') {
+        const { data } = await api.get(endpoints.reviews.assignmentsUnreadCount);
+        return Number(data?.unread_count) || 0;
+      }
+      return 0;
     },
     refetchInterval: 60000,
     staleTime: 60000
@@ -62,7 +69,13 @@ export function TopBar({ opened = false, onToggle = () => {} }) {
             variant="light"
             color="blue"
             size="lg"
-            onClick={() => navigate('/notifications')}
+            onClick={() => {
+              if (role === 'expert') {
+                navigate('/expert/reviews');
+              } else {
+                navigate('/notifications');
+              }
+            }}
             aria-label="查看通知"
           >
             <IconBell size={20} />

@@ -41,7 +41,7 @@ export function AppRoutes() {
       <Route element={<ProtectedAppShell />}>
         <Route index element={<Navigate to="/login" replace />} />
         <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/notifications" element={<NotificationsPage />} />
+        <Route path="/notifications" element={<ProtectedRoute roles={["author"]}><NotificationsPage /></ProtectedRoute>} />
 
         <Route
           path="/author/dashboard"

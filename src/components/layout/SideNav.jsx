@@ -18,7 +18,7 @@ const baseItems = [
     label: '通知中心',
     icon: IconBell,
     to: '/notifications',
-    roles: ['author', 'expert', 'editor']
+    roles: ['author', 'editor']
   },
   {
     label: '个人信息',

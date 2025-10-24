@@ -41,7 +41,8 @@ export const endpoints = {
     assignment: (id) => `/api/reviews/assignments/${id}`,
     paperExperts: (paperId) => `/api/reviews/papers/${paperId}/expert`,
     comments: (paperId) => `/api/reviews/papers/${paperId}/comments`,
-    submit: '/api/reviews/submit'
+    submit: '/api/reviews/submit',
+    assignmentsUnreadCount: '/api/reviews/assignments/unread-count'
   },
   payments: {
     base: '/api/payments',
