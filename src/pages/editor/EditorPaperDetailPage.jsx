@@ -94,6 +94,15 @@ const mapExpertToOption = (expert) => {
   };
 };
 
+// 审稿结论中文映射
+const conclusionLabelMap = {
+  Accept: "接受",
+  "Minor Revision": "小修",
+  "Major Revision": "大修",
+  Reject: "拒稿",
+  "Not Reviewed": "未审稿",
+};
+
 export default function EditorPaperDetailPage() {
   const { paperId } = useParams();
   const queryClient = useQueryClient();
@@ -201,7 +210,10 @@ export default function EditorPaperDetailPage() {
         message: "形式审查状态已更新",
         color: "green",
       });
+      // 使相关查询失效并立即刷新，确保无需手动刷新即可分配审稿
       queryClient.invalidateQueries({ queryKey: ["paper", paperId] });
+      queryClient.invalidateQueries({ queryKey: ["paper-experts", paperId] });
+      queryClient.refetchQueries({ queryKey: ["paper-experts", paperId] });
     },
     onError: (error) => {
       notifications.show({
@@ -585,10 +597,7 @@ export default function EditorPaperDetailPage() {
                 if (!search) {
                   return options;
                 }
-                const terms = search
-                  .toLowerCase()
-                  .split(/\s+/)
-                  .filter(Boolean);
+                const terms = search.toLowerCase().split(/\s+/).filter(Boolean);
                 if (terms.length === 0) {
                   return options;
                 }
@@ -707,7 +716,8 @@ export default function EditorPaperDetailPage() {
             <Group gap="sm">
               {aggregatedConclusion.map(([key, count]) => (
                 <Badge key={key} color="blue" variant="light">
-                  {key}：{count}
+                  {conclusionLabelMap[key] || key}：{count}
+                  {"人"}
                 </Badge>
               ))}
             </Group>
@@ -718,18 +728,46 @@ export default function EditorPaperDetailPage() {
             <Table.Tr>
               <Table.Th>专家</Table.Th>
               <Table.Th>结论</Table.Th>
-              <Table.Th>意见摘要</Table.Th>
+              <Table.Th>意见详情</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
             {(comments || []).map((comment) => (
               <Table.Tr key={comment.assignment_id}>
-                <Table.Td>{comment.expert_name || comment.expert_id}</Table.Td>
-                <Table.Td>{comment.conclusion}</Table.Td>
                 <Table.Td>
-                  <Text size="sm">{comment.positive_comments}</Text>
-                  <Text size="sm" c="dimmed">
-                    {comment.negative_comments}
+                  <Text size="sm">
+                    {comment.expert_name || comment.expert_id}
+                  </Text>
+                  <Text size="xs" c="dimmed">
+                    {"审稿时间: "}
+                    {comment.submission_date
+                      ? dayjs(comment.submission_date).format(
+                          "YYYY-MM-DD HH:mm"
+                        )
+                      : "—"}
+                  </Text>
+                </Table.Td>
+                <Table.Td>
+                  {conclusionLabelMap[comment.conclusion] || comment.conclusion}
+                </Table.Td>
+                <Table.Td>
+                  <Text size="sm">
+                    <Text span c="dimmed">
+                      正面意见：
+                    </Text>
+                    {comment.positive_comments || "—"}
+                  </Text>
+                  <Text size="sm">
+                    <Text span c="dimmed">
+                      负面意见：
+                    </Text>
+                    {comment.negative_comments || "—"}
+                  </Text>
+                  <Text size="sm">
+                    <Text span c="dimmed">
+                      修改建议：
+                    </Text>
+                    {comment.modification_advice || "—"}
                   </Text>
                 </Table.Td>
               </Table.Tr>
