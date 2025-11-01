@@ -47,11 +47,6 @@ export function SideNav({ onNavigate = () => {} }) {
           label: '我的论文',
           icon: IconFileText,
           to: '/author/papers'
-        },
-        {
-          label: '支付信息',
-          icon: IconCash,
-          to: '/author/payments'
         }
       );
     }

@@ -49,6 +49,7 @@ export const endpoints = {
     base: "/api/payments",
     status: (id) => `/api/payments/${id}/status`,
     paper: (paperId) => `/api/payments/papers/${paperId}`,
+    authorPay: "/api/payments/author/pay",
     withdrawals: "/api/payments/withdrawals",
     withdrawalAdmin: "/api/payments/admin/withdrawals",
     withdrawalStatus: (assignmentId) =>

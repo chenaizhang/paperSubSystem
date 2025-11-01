@@ -8,7 +8,6 @@ import AuthorDashboardPage from '../pages/author/AuthorDashboardPage.jsx';
 import AuthorPapersListPage from '../pages/author/AuthorPapersListPage.jsx';
 import AuthorPaperFormPage from '../pages/author/AuthorPaperFormPage.jsx';
 import AuthorPaperDetailPage from '../pages/author/AuthorPaperDetailPage.jsx';
-import AuthorPaymentsPage from '../pages/author/AuthorPaymentsPage.jsx';
 import ExpertDashboardPage from '../pages/expert/ExpertDashboardPage.jsx';
 import ExpertReviewsListPage from '../pages/expert/ExpertReviewsListPage.jsx';
 import ExpertReviewDetailPage from '../pages/expert/ExpertReviewDetailPage.jsx';
@@ -83,15 +82,6 @@ export function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/author/payments"
-          element={
-            <ProtectedRoute roles={['author']}>
-              <AuthorPaymentsPage />
-            </ProtectedRoute>
-          }
-        />
-
         <Route
           path="/expert/dashboard"
           element={

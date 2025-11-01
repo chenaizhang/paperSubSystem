@@ -7,6 +7,7 @@ import {
   LoadingOverlay,
   Modal,
   MultiSelect,
+  NumberInput,
   Select,
   SimpleGrid,
   Stack,
@@ -25,7 +26,7 @@ import { notifications } from "@mantine/notifications";
 import { useForm, zodResolver } from "@mantine/form";
 import { z } from "zod";
 import { useDebouncedValue, useDisclosure } from "@mantine/hooks";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   getIntegrityStatusColor,
   getIntegrityStatusLabel,
@@ -38,10 +39,32 @@ const assignSchema = z.object({
   due_date: z.date({ required_error: "请选择截止日期" }),
 });
 
-const notificationSchema = z.object({
-  notification_type: z.string().min(1, "请选择通知类型"),
-  deadline: z.date().optional().nullable(),
-});
+const notificationSchema = z
+  .object({
+    notification_type: z.string().min(1, "请选择通知类型"),
+    deadline: z.date().optional().nullable(),
+    amount: z.number().optional().nullable(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.notification_type === "Acceptance Notification") {
+      const amount = data.amount;
+      if (amount === null || amount === undefined || Number.isNaN(amount)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["amount"],
+          message: "请输入支付金额",
+        });
+        return;
+      }
+      if (amount <= 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["amount"],
+          message: "支付金额必须大于0",
+        });
+      }
+    }
+  });
 
 const notificationTypes = [
   { label: "录用通知", value: "Acceptance Notification" },
@@ -267,9 +290,19 @@ export default function EditorPaperDetailPage() {
     initialValues: {
       notification_type: "Acceptance Notification",
       deadline: null,
+      amount: null,
     },
     validate: zodResolver(notificationSchema),
   });
+
+  useEffect(() => {
+    if (
+      notificationForm.values.notification_type !== "Acceptance Notification" &&
+      notificationForm.values.amount !== null
+    ) {
+      notificationForm.setFieldValue("amount", null);
+    }
+  }, [notificationForm.values.notification_type, notificationForm.values.amount]);
 
   const notificationMutation = useMutation({
     mutationFn: async (values) => {
@@ -282,6 +315,12 @@ export default function EditorPaperDetailPage() {
         !Number.isNaN(values.deadline.getTime())
       ) {
         payload.deadline = dayjs(values.deadline).format("YYYY-MM-DD HH:mm:ss");
+      }
+      if (values.notification_type === "Acceptance Notification") {
+        await api.post(endpoints.payments.base, {
+          paper_id: Number(paperId),
+          amount: values.amount,
+        });
       }
       const response = await api.post(endpoints.notifications.author, payload);
       return response.data;
@@ -816,6 +855,24 @@ export default function EditorPaperDetailPage() {
                 notificationForm.setFieldValue("deadline", value)
               }
             />
+            {notificationForm.values.notification_type ===
+              "Acceptance Notification" && (
+              <NumberInput
+                label="支付金额"
+                placeholder="请输入版面费金额"
+                min={0}
+                step={0.01}
+                value={notificationForm.values.amount ?? undefined}
+                onChange={(value) =>
+                  notificationForm.setFieldValue(
+                    "amount",
+                    typeof value === "number" ? value : null
+                  )
+                }
+                error={notificationForm.errors.amount}
+                hideControls
+              />
+            )}
             <Group justify="flex-end">
               <Button
                 variant="default"

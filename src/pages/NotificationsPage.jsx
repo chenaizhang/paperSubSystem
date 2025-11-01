@@ -1,6 +1,7 @@
 import {
   ActionIcon,
   Badge,
+  Button,
   Card,
   Group,
   LoadingOverlay,
@@ -17,6 +18,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../api/axios.js";
 import { endpoints } from "../api/endpoints.js";
 import dayjs from "dayjs";
+import { notifications } from "@mantine/notifications";
 
 const readOptions = [
   { label: "全部", value: "all" },
@@ -79,15 +81,15 @@ export default function NotificationsPage() {
     },
   });
 
-  const notifications = data || [];
+  const notificationList = data || [];
   const filteredNotifications = useMemo(() => {
-    return notifications.filter((item) => {
+    return notificationList.filter((item) => {
       if (type !== "all" && item.notification_type !== type) return false;
       if (readFilter === "read" && !item.is_read) return false;
       if (readFilter === "unread" && item.is_read) return false;
       return true;
     });
-  }, [notifications, type, readFilter]);
+  }, [notificationList, type, readFilter]);
 
   const closeDetail = () => {
     setDetailOpened(false);
@@ -97,6 +99,64 @@ export default function NotificationsPage() {
   const formatDeadlineDisplay = (value) =>
     dayjs(value).format("YYYY年MM月DD日HH:mm");
 
+  const isAcceptanceSelected =
+    selectedNotification?.notification_type === "Acceptance Notification";
+  const selectedPaperId = selectedNotification?.paper_id ?? null;
+
+  const {
+    data: paymentData,
+    isLoading: isLoadingPayment,
+    isFetching: isFetchingPayment,
+  } = useQuery({
+    queryKey: ["payments", "paper", selectedPaperId],
+    queryFn: async () => {
+      const response = await api.get(
+        endpoints.payments.paper(selectedPaperId)
+      );
+      return response.data;
+    },
+    enabled: Boolean(isAcceptanceSelected && selectedPaperId),
+  });
+
+  const paymentMutation = useMutation({
+    mutationFn: async ({ paperId, amount }) => {
+      const response = await api.post(endpoints.payments.authorPay, {
+        paper_id: paperId,
+        amount,
+      });
+      return response.data;
+    },
+    onSuccess: (result, variables) => {
+      notifications.show({
+        title: "支付申请已提交",
+        message: result?.message || "请等待编辑审核支付申请",
+        color: "green",
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["payments", "paper", variables.paperId],
+      });
+    },
+    onError: (error) => {
+      notifications.show({
+        title: "支付失败",
+        message:
+          error?.response?.data?.message ||
+          error?.friendlyMessage ||
+          "无法提交支付申请，请稍后再试",
+        color: "red",
+      });
+    },
+  });
+
+  const amountFormatter = useMemo(
+    () =>
+      new Intl.NumberFormat("zh-CN", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }),
+    []
+  );
+
   const renderDetailContent = () => {
     if (!selectedNotification) return null;
 
@@ -104,6 +164,38 @@ export default function NotificationsPage() {
       const formattedDeadline = selectedNotification.deadline
         ? formatDeadlineDisplay(selectedNotification.deadline)
         : null;
+      const paymentRecords = Array.isArray(paymentData) ? paymentData : [];
+      const primaryPayment = paymentRecords[0] ?? null;
+      const rawAmount =
+        primaryPayment?.amount !== undefined && primaryPayment?.amount !== null
+          ? Number(primaryPayment.amount)
+          : null;
+      const hasValidAmount =
+        rawAmount !== null && !Number.isNaN(rawAmount) && rawAmount > 0;
+      const paymentStatus = primaryPayment?.status ?? null;
+      const isPaid = paymentStatus === "Paid";
+      const isPaymentLoading = isLoadingPayment || isFetchingPayment;
+      const handlePaymentSubmit = () => {
+        if (
+          isPaid ||
+          !selectedPaperId ||
+          rawAmount === null ||
+          Number.isNaN(rawAmount)
+        ) {
+          if (!isPaid) {
+            notifications.show({
+              title: "无法提交支付申请",
+              message: "当前无法确定支付金额，请稍后再试或联系编辑。",
+              color: "red",
+            });
+          }
+          return;
+        }
+        paymentMutation.mutate({
+          paperId: selectedPaperId,
+          amount: rawAmount,
+        });
+      };
 
       return (
         <Stack gap="sm">
@@ -111,16 +203,50 @@ export default function NotificationsPage() {
             您的论文已被录用！
             {formattedDeadline ? (
               <>
-                请在
+                请在{" "}
                 <Text span fw={500}>
                   {formattedDeadline}
                 </Text>
-                前向下面的账户支付版面费。
+                {" "}
+                前向下面的账户支付
+                {" "}
+                {hasValidAmount ? (
+                  <Text span fw={500}>
+                    {amountFormatter.format(rawAmount)}元
+                  </Text>
+                ) : (
+                  <Text span fw={500} c="red">
+                    版面费金额获取中
+                  </Text>
+                )}
+                。
               </>
             ) : (
-              "请尽快向下面的账户支付版面费。"
+              <>
+                请尽快向下面的账户支付
+                {" "}
+                {hasValidAmount ? (
+                  <Text span fw={500}>
+                    {amountFormatter.format(rawAmount)}元
+                  </Text>
+                ) : (
+                  <Text span fw={500} c="red">
+                    版面费金额获取中
+                  </Text>
+                )}
+                。
+              </>
             )}
           </Text>
+          {(isLoadingPayment || isFetchingPayment) && (
+            <Text c="dimmed">正在获取支付信息...</Text>
+          )}
+          {!isLoadingPayment &&
+            !isFetchingPayment &&
+            !hasValidAmount &&
+            paymentRecords.length === 0 && (
+              <Text c="red">暂未找到该论文的支付记录，请联系编辑。</Text>
+            )}
           <Table withTableBorder>
             <Table.Tbody>
               <Table.Tr>
@@ -135,6 +261,23 @@ export default function NotificationsPage() {
               </Table.Tr>
             </Table.Tbody>
           </Table>
+          {isPaid && (
+            <Text c="green">系统已记录支付，无需重复提交。</Text>
+          )}
+          <Group justify="flex-start">
+            <Button
+              onClick={handlePaymentSubmit}
+              loading={paymentMutation.isPending}
+              disabled={
+                paymentMutation.isPending ||
+                isPaymentLoading ||
+                !hasValidAmount ||
+                isPaid
+              }
+            >
+              {isPaid ? "已支付" : "支付"}
+            </Button>
+          </Group>
         </Stack>
       );
     }
