@@ -7,7 +7,6 @@ import {
   IconFileText,
   IconCash,
   IconBell,
-  IconCalendarTime,
   IconUsersGroup,
   IconReportSearch
 } from '@tabler/icons-react';
@@ -87,11 +86,6 @@ export function SideNav({ onNavigate = () => {} }) {
           label: '支付管理',
           icon: IconCash,
           to: '/editor/payments'
-        },
-        {
-          label: '排期管理',
-          icon: IconCalendarTime,
-          to: '/editor/schedules'
         }
       );
     }

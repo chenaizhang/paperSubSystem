@@ -12,6 +12,7 @@ import {
   SimpleGrid,
   Stack,
   Table,
+  TextInput,
   Text,
   Title,
 } from "@mantine/core";
@@ -32,7 +33,10 @@ import {
   getIntegrityStatusLabel,
   isIntegrityWaiting,
 } from "../../utils/integrityStatus.js";
-import { getProgressStatusLabel } from "../../utils/progressStatus.js";
+import {
+  getProgressStatusLabel,
+  normalizeProgressStatus,
+} from "../../utils/progressStatus.js";
 
 const assignSchema = z.object({
   experts: z.array(z.string()).length(3, "必须一次性选择3位专家"),
@@ -65,6 +69,12 @@ const notificationSchema = z
       }
     }
   });
+
+const scheduleSchema = z.object({
+  issue_number: z.string().trim().min(1, "请输入期号"),
+  volume_number: z.string().trim().min(1, "请输入卷号"),
+  page_number: z.string().trim().min(1, "请输入页码"),
+});
 
 const notificationTypes = [
   { label: "录用通知", value: "Acceptance Notification" },
@@ -215,6 +225,9 @@ export default function EditorPaperDetailPage() {
     return trimmed.length > 0 ? trimmed.split(/\s+/).filter(Boolean) : [];
   }, [expertSearch]);
 
+  const normalizedProgress = normalizeProgressStatus(paper?.progress);
+  const isSchedulingStage = normalizedProgress === "Scheduling";
+
   const integrityMutation = useMutation({
     mutationFn: async (integrity) => {
       const response = await api.put(endpoints.papers.integrity(paperId), {
@@ -281,6 +294,56 @@ export default function EditorPaperDetailPage() {
           error?.response?.data?.message ||
           error?.friendlyMessage ||
           "无法分配审稿任务，请稍后再试",
+        color: "red",
+      });
+    },
+  });
+
+  const scheduleForm = useForm({
+    initialValues: {
+      issue_number: "",
+      volume_number: "",
+      page_number: "",
+    },
+    validate: zodResolver(scheduleSchema),
+  });
+
+  const scheduleMutation = useMutation({
+    mutationFn: async (values) => {
+      const payload = {
+        paper_id: Number(paperId),
+        issue_number: values.issue_number.trim(),
+        volume_number: values.volume_number.trim(),
+        page_number: values.page_number.trim(),
+      };
+      const response = await api.post(endpoints.schedules.base, payload);
+      return response.data;
+    },
+    onSuccess: (data) => {
+      notifications.show({
+        title: "排期已创建",
+        message: data?.message || "最终期号、卷号、页码已保存",
+        color: "green",
+      });
+      scheduleForm.reset();
+      queryClient.invalidateQueries({ queryKey: ["schedules"] });
+      queryClient.invalidateQueries({ queryKey: ["paper", paperId] });
+    },
+    onError: (error) => {
+      const errors =
+        error?.response?.data?.errors ||
+        error?.response?.data?.data ||
+        error?.response?.data?.fieldErrors ||
+        null;
+      if (errors && typeof errors === "object") {
+        scheduleForm.setErrors(errors);
+      }
+      notifications.show({
+        title: "创建排期失败",
+        message:
+          error?.response?.data?.message ||
+          error?.friendlyMessage ||
+          "无法创建排期，请稍后再试",
         color: "red",
       });
     },
@@ -739,6 +802,57 @@ export default function EditorPaperDetailPage() {
           </Stack>
         )}
       </Card>
+
+      {isSchedulingStage && (
+        <Card withBorder shadow="sm" pos="relative">
+          <Title order={4} mb="sm">
+            创建论文排期
+          </Title>
+          <Text size="sm" c="dimmed" mb="md">
+            填写期号、卷号与页码，确认稿件的最终出版信息。
+          </Text>
+          <form
+            onSubmit={scheduleForm.onSubmit((values) =>
+              scheduleMutation.mutate(values)
+            )}
+          >
+            <Stack gap="md">
+              <SimpleGrid cols={{ base: 1, md: 3 }}>
+                <TextInput
+                  label="期号"
+                  placeholder="例如：2024年第5期"
+                  withAsterisk
+                  disabled={scheduleMutation.isPending}
+                  {...scheduleForm.getInputProps("issue_number")}
+                />
+                <TextInput
+                  label="卷号"
+                  placeholder="例如：第12卷"
+                  withAsterisk
+                  disabled={scheduleMutation.isPending}
+                  {...scheduleForm.getInputProps("volume_number")}
+                />
+                <TextInput
+                  label="页码"
+                  placeholder="例如：123-135"
+                  withAsterisk
+                  disabled={scheduleMutation.isPending}
+                  {...scheduleForm.getInputProps("page_number")}
+                />
+              </SimpleGrid>
+              <Group justify="flex-end">
+                <Button
+                  type="submit"
+                  loading={scheduleMutation.isPending}
+                  disabled={scheduleMutation.isPending}
+                >
+                  保存排期
+                </Button>
+              </Group>
+            </Stack>
+          </form>
+        </Card>
+      )}
 
       <Card withBorder shadow="sm">
         <Group justify="space-between" mb="md">

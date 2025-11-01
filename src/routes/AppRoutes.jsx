@@ -16,7 +16,6 @@ import EditorDashboardPage from '../pages/editor/EditorDashboardPage.jsx';
 import EditorPapersListPage from '../pages/editor/EditorPapersListPage.jsx';
 import EditorPaperDetailPage from '../pages/editor/EditorPaperDetailPage.jsx';
 import EditorPaymentsPage from '../pages/editor/EditorPaymentsPage.jsx';
-import EditorSchedulesPage from '../pages/editor/EditorSchedulesPage.jsx';
 import { ForbiddenPage } from '../pages/status/ForbiddenPage.jsx';
 import { NotFoundPage } from '../pages/status/NotFoundPage.jsx';
 import { useAuth } from '../features/auth/AuthProvider.jsx';
@@ -144,14 +143,6 @@ export function AppRoutes() {
           element={
             <ProtectedRoute roles={['editor']}>
               <EditorPaymentsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/editor/schedules"
-          element={
-            <ProtectedRoute roles={['editor']}>
-              <EditorSchedulesPage />
             </ProtectedRoute>
           }
         />
