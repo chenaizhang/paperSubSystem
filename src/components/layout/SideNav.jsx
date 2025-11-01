@@ -6,19 +6,12 @@ import {
   IconLayoutDashboard,
   IconFileText,
   IconCash,
-  IconBell,
   IconUsersGroup,
   IconReportSearch
 } from '@tabler/icons-react';
 import { useAuth } from '../../features/auth/AuthProvider.jsx';
 
 const baseItems = [
-  {
-    label: '通知中心',
-    icon: IconBell,
-    to: '/notifications',
-    roles: ['author', 'editor']
-  },
   {
     label: '个人信息',
     icon: IconUsersGroup,
@@ -81,11 +74,6 @@ export function SideNav({ onNavigate = () => {} }) {
           label: '稿件管理',
           icon: IconFileText,
           to: '/editor/papers'
-        },
-        {
-          label: '支付管理',
-          icon: IconCash,
-          to: '/editor/payments'
         }
       );
     }

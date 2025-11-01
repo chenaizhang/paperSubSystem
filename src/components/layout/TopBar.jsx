@@ -23,20 +23,10 @@ export function TopBar({ opened = false, onToggle = () => {} }) {
   const { role, logout } = useAuth();
   const { data: unreadCount } = useQuery({
     queryKey: ['unread-indicator', role],
-    enabled: role === 'author' || role === 'expert',
+    enabled: role === 'expert',
     queryFn: async () => {
-      if (role === 'author') {
-        const { data } = await api.get(endpoints.notifications.author, {
-          params: { pageSize: 50 }
-        });
-        const list = data?.items ?? data ?? [];
-        return list.filter((item) => item.is_read === false || item.is_read === 0).length;
-      }
-      if (role === 'expert') {
-        const { data } = await api.get(endpoints.reviews.assignmentsUnreadCount);
-        return Number(data?.unread_count) || 0;
-      }
-      return 0;
+      const { data } = await api.get(endpoints.reviews.assignmentsUnreadCount);
+      return Number(data?.unread_count) || 0;
     },
     refetchInterval: 60000,
     staleTime: 60000
@@ -64,23 +54,19 @@ export function TopBar({ opened = false, onToggle = () => {} }) {
         >
           {colorScheme === 'dark' ? <IconSun size={18} /> : <IconMoonStars size={18} />}
         </ActionIcon>
-        <Indicator inline label={unreadCount || 0} size={18} disabled={!unreadCount}>
-          <ActionIcon
-            variant="light"
-            color="blue"
-            size="lg"
-            onClick={() => {
-              if (role === 'expert') {
-                navigate('/expert/reviews');
-              } else {
-                navigate('/notifications');
-              }
-            }}
-            aria-label="查看通知"
-          >
-            <IconBell size={20} />
-          </ActionIcon>
-        </Indicator>
+        {role === 'expert' && (
+          <Indicator inline label={unreadCount || 0} size={18} disabled={!unreadCount}>
+            <ActionIcon
+              variant="light"
+              color="blue"
+              size="lg"
+              onClick={() => navigate('/expert/reviews')}
+              aria-label="查看通知"
+            >
+              <IconBell size={20} />
+            </ActionIcon>
+          </Indicator>
+        )}
         <Menu shadow="md" width={180}>
           <Menu.Target>
             <Avatar radius="xl" color="blue">

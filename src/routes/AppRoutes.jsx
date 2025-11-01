@@ -3,7 +3,6 @@ import { AppLayout } from '../components/layout/AppLayout.jsx';
 import { ProtectedRoute } from './ProtectedRoute.jsx';
 import LoginPage from '../pages/LoginPage.jsx';
 import ProfilePage from '../pages/ProfilePage.jsx';
-import NotificationsPage from '../pages/NotificationsPage.jsx';
 import AuthorDashboardPage from '../pages/author/AuthorDashboardPage.jsx';
 import AuthorPapersListPage from '../pages/author/AuthorPapersListPage.jsx';
 import AuthorPaperFormPage from '../pages/author/AuthorPaperFormPage.jsx';
@@ -15,7 +14,6 @@ import ExpertWithdrawalsPage from '../pages/expert/ExpertWithdrawalsPage.jsx';
 import EditorDashboardPage from '../pages/editor/EditorDashboardPage.jsx';
 import EditorPapersListPage from '../pages/editor/EditorPapersListPage.jsx';
 import EditorPaperDetailPage from '../pages/editor/EditorPaperDetailPage.jsx';
-import EditorPaymentsPage from '../pages/editor/EditorPaymentsPage.jsx';
 import { ForbiddenPage } from '../pages/status/ForbiddenPage.jsx';
 import { NotFoundPage } from '../pages/status/NotFoundPage.jsx';
 import { useAuth } from '../features/auth/AuthProvider.jsx';
@@ -39,8 +37,6 @@ export function AppRoutes() {
       <Route element={<ProtectedAppShell />}>
         <Route index element={<Navigate to="/login" replace />} />
         <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/notifications" element={<ProtectedRoute roles={["author"]}><NotificationsPage /></ProtectedRoute>} />
-
         <Route
           path="/author/dashboard"
           element={
@@ -135,14 +131,6 @@ export function AppRoutes() {
           element={
             <ProtectedRoute roles={['editor']}>
               <EditorPaperDetailPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/editor/payments"
-          element={
-            <ProtectedRoute roles={['editor']}>
-              <EditorPaymentsPage />
             </ProtectedRoute>
           }
         />
