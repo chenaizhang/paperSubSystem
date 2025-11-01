@@ -20,6 +20,7 @@ import { endpoints } from "../../api/endpoints.js";
 import dayjs from "dayjs";
 import PropTypes from "prop-types";
 import { useMemo } from "react";
+import { ensureArray } from "../../utils/ensureArray.js";
 import {
   deriveLastUpdatedAt,
   mapProgressToStages,
@@ -56,6 +57,8 @@ export default function AuthorDashboardPage() {
     },
   });
 
+  const paperList = useMemo(() => ensureArray(papers), [papers]);
+
   const {
     data: progressList,
     isLoading: isProgressLoading,
@@ -68,6 +71,11 @@ export default function AuthorDashboardPage() {
     },
   });
 
+  const progressArray = useMemo(
+    () => ensureArray(progressList),
+    [progressList]
+  );
+
   // 最新通知仅需展示少量，UI 层不做分页，按时间倒序即可。
   const { data: notifications } = useQuery({
     queryKey: ["notifications", "latest"],
@@ -79,20 +87,25 @@ export default function AuthorDashboardPage() {
     },
   });
 
+  const notificationList = useMemo(
+    () => ensureArray(notifications),
+    [notifications]
+  );
+
   const paperIndex = useMemo(() => {
     const index = new Map();
-    (papers || []).forEach((paper) => {
+    paperList.forEach((paper) => {
       const id = paper.paper_id ?? paper.id;
       if (id !== undefined && id !== null) {
         index.set(String(id), paper);
       }
     });
     return index;
-  }, [papers]);
+  }, [paperList]);
 
   const recentProgressItems = useMemo(() => {
-    if (progressList && progressList.length > 0) {
-      return progressList
+    if (progressArray.length > 0) {
+      return progressArray
         .map((progress) => {
           const paperId = progress.paper_id ?? progress.id;
           const paperMeta =
@@ -141,7 +154,7 @@ export default function AuthorDashboardPage() {
         .slice(0, 5);
     }
 
-    return [...(papers || [])]
+    return [...paperList]
       .sort(
         (a, b) =>
           new Date(b.updated_at || b.submission_date) -
@@ -162,7 +175,7 @@ export default function AuthorDashboardPage() {
           ? new Date(normalizeDateInput(paper.submission_date))
           : undefined,
       }));
-  }, [papers, progressList, paperIndex]);
+  }, [paperList, progressArray, paperIndex]);
 
   if (isLoading) {
     return (
@@ -172,7 +185,7 @@ export default function AuthorDashboardPage() {
     );
   }
 
-  const stats = (papers || []).reduce(
+  const stats = paperList.reduce(
     (acc, paper) => {
       const status = normalizeReviewStatus(paper.status);
       acc.total += 1;
@@ -256,9 +269,9 @@ export default function AuthorDashboardPage() {
           <Title order={4} mb="md">
             最新通知
           </Title>
-          {notifications?.length === 0 && <Text>暂无通知。</Text>}
+          {notificationList.length === 0 && <Text>暂无通知。</Text>}
           <Stack gap="sm">
-            {notifications?.map((notification, index) => {
+            {notificationList.map((notification, index) => {
               const id =
                 notification.id ??
                 notification.notification_id ??

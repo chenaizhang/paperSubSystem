@@ -25,6 +25,7 @@ import { useQuery } from "@tanstack/react-query";
 import dayjs from "dayjs";
 import api from "../../api/axios.js";
 import { endpoints } from "../../api/endpoints.js";
+import { ensureArray } from "../../utils/ensureArray.js";
 import {
   deriveCurrentStage,
   mapProgressToStages,
@@ -61,6 +62,8 @@ export default function AuthorPapersListPage() {
     },
   });
 
+  const paperList = useMemo(() => ensureArray(data), [data]);
+
   const {
     data: progressList,
     isLoading: isProgressLoading,
@@ -73,9 +76,14 @@ export default function AuthorPapersListPage() {
     },
   });
 
+  const progressArray = useMemo(
+    () => ensureArray(progressList),
+    [progressList]
+  );
+
   const progressIndex = useMemo(() => {
     const map = new Map();
-    (progressList || []).forEach((progress) => {
+    progressArray.forEach((progress) => {
       const paperId = progress.paper_id ?? progress.id;
       if (paperId === undefined || paperId === null) {
         return;
@@ -91,14 +99,14 @@ export default function AuthorPapersListPage() {
       });
     });
     return map;
-  }, [progressList]);
+  }, [progressArray]);
 
   /**
    * 将接口数据映射成表格行：保持纯函数式，以便 React 在查询更新时最小化 diff。
    * 处理 paper_id/id 混用，以兼容旧数据。
    */
   const rows = useMemo(() => {
-    return (data || []).map((paper) => {
+    return paperList.map((paper) => {
       const paperId = paper.paper_id || paper.id;
       const progress =
         paperId !== undefined ? progressIndex.get(String(paperId)) : undefined;
@@ -152,7 +160,7 @@ export default function AuthorPapersListPage() {
         </Table.Tr>
       );
     });
-  }, [data, navigate, progressIndex]);
+  }, [paperList, navigate, progressIndex]);
 
   return (
     <Stack gap="xl">
@@ -210,7 +218,7 @@ export default function AuthorPapersListPage() {
             无法获取最新进度，列表中显示的阶段基于已有数据。
           </Text>
         )}
-        {data?.length === 0 && <Text mt="md">暂无数据，去提交论文。</Text>}
+        {paperList.length === 0 && <Text mt="md">暂无数据，去提交论文。</Text>}
       </Card>
     </Stack>
   );

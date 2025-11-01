@@ -12,11 +12,9 @@ import {
   Stack,
   Table,
   Text,
-  Textarea,
-  TextInput,
   Title,
 } from "@mantine/core";
-import { DatePickerInput } from "@mantine/dates";
+import { DatePickerInput, DateTimePicker } from "@mantine/dates";
 import { IconCheck, IconDownload, IconSend } from "@tabler/icons-react";
 import { useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -41,17 +39,14 @@ const assignSchema = z.object({
 });
 
 const notificationSchema = z.object({
-  type: z.string().min(1, "请选择通知类型"),
-  deadline: z.date().optional(),
-  title: z.string().min(1, "请输入标题"),
-  content: z.string().min(1, "请输入通知内容"),
+  notification_type: z.string().min(1, "请选择通知类型"),
+  deadline: z.date().optional().nullable(),
 });
 
 const notificationTypes = [
-  { label: "录用通知", value: "Acceptance" },
-  { label: "拒稿通知", value: "Rejection" },
+  { label: "录用通知", value: "Acceptance Notification" },
+  { label: "拒稿通知", value: "Rejection Notification" },
   { label: "大修通知", value: "Major Revision" },
-  { label: "审稿任务", value: "Review Assignment" },
   { label: "支付确认", value: "Payment Confirmation" },
 ];
 
@@ -270,10 +265,8 @@ export default function EditorPaperDetailPage() {
 
   const notificationForm = useForm({
     initialValues: {
-      type: "Review Assignment",
+      notification_type: "Acceptance Notification",
       deadline: null,
-      title: "",
-      content: "",
     },
     validate: zodResolver(notificationSchema),
   });
@@ -281,27 +274,36 @@ export default function EditorPaperDetailPage() {
   const notificationMutation = useMutation({
     mutationFn: async (values) => {
       const payload = {
-        type: values.type,
-        title: values.title,
-        content: values.content,
-      };
-      if (values.deadline) {
-        payload.deadline = dayjs(values.deadline).toISOString();
-      }
-      const response = await api.post(endpoints.notifications.author, {
-        ...payload,
         paper_id: Number(paperId),
-      });
+        notification_type: values.notification_type,
+      };
+      if (
+        values.deadline instanceof Date &&
+        !Number.isNaN(values.deadline.getTime())
+      ) {
+        payload.deadline = dayjs(values.deadline).format("YYYY-MM-DD HH:mm:ss");
+      }
+      const response = await api.post(endpoints.notifications.author, payload);
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       notifications.show({
         title: "通知已发送",
-        message: "作者会立即收到通知",
+        message: data?.message || "作者会立即收到通知",
         color: "green",
       });
       notificationForm.reset();
       close();
+    },
+    onError: (error) => {
+      notifications.show({
+        title: "发送失败",
+        message:
+          error?.response?.data?.message ||
+          error?.friendlyMessage ||
+          "无法发送通知，请稍后再试",
+        color: "red",
+      });
     },
   });
 
@@ -777,7 +779,15 @@ export default function EditorPaperDetailPage() {
         {(comments || []).length === 0 && <Text mt="md">暂无审稿意见。</Text>}
       </Card>
 
-      <Modal opened={opened} onClose={close} title="发送作者通知" size="lg">
+      <Modal
+        opened={opened}
+        onClose={() => {
+          notificationForm.reset();
+          close();
+        }}
+        title="发送作者通知"
+        size="lg"
+      >
         <form
           onSubmit={notificationForm.onSubmit((values) =>
             notificationMutation.mutate(values)
@@ -787,33 +797,33 @@ export default function EditorPaperDetailPage() {
             <Select
               label="通知类型"
               data={notificationTypes}
-              value={notificationForm.values.type}
+              value={notificationForm.values.notification_type}
               onChange={(value) =>
                 notificationForm.setFieldValue(
-                  "type",
-                  value || "Review Assignment"
+                  "notification_type",
+                  value || "Acceptance Notification"
                 )
               }
-              error={notificationForm.errors.type}
+              placeholder="请选择要发送的通知类型"
+              error={notificationForm.errors.notification_type}
             />
-            <TextInput
-              label="通知标题"
-              {...notificationForm.getInputProps("title")}
-            />
-            <Textarea
-              label="通知内容"
-              minRows={4}
-              {...notificationForm.getInputProps("content")}
-            />
-            <DatePickerInput
+            <DateTimePicker
               label="截止时间（可选）"
+              valueFormat="YYYY-MM-DD HH:mm"
+              clearable
               value={notificationForm.values.deadline}
               onChange={(value) =>
                 notificationForm.setFieldValue("deadline", value)
               }
             />
             <Group justify="flex-end">
-              <Button variant="default" onClick={close}>
+              <Button
+                variant="default"
+                onClick={() => {
+                  notificationForm.reset();
+                  close();
+                }}
+              >
                 取消
               </Button>
               <Button type="submit" loading={notificationMutation.isPending}>

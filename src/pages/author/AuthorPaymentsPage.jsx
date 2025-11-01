@@ -14,11 +14,12 @@ import {
   Text,
   Title
 } from '@mantine/core';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../api/axios.js';
 import { endpoints } from '../../api/endpoints.js';
 import dayjs from 'dayjs';
+import { ensureArray } from '../../utils/ensureArray.js';
 
 export default function AuthorPaymentsPage() {
   const [selectedPaper, setSelectedPaper] = useState(null);
@@ -42,6 +43,9 @@ export default function AuthorPaymentsPage() {
     }
   });
 
+  const paperList = useMemo(() => ensureArray(papers), [papers]);
+  const paymentList = useMemo(() => ensureArray(payments), [payments]);
+
   return (
     <Stack>
       <Title order={2}>支付信息</Title>
@@ -51,7 +55,7 @@ export default function AuthorPaymentsPage() {
           <Group justify="space-between">
             <Select
               placeholder="选择论文查看支付信息"
-              data={(papers || []).map((paper) => ({
+              data={paperList.map((paper) => ({
                 value: String(paper.paper_id || paper.id),
                 label: paper.title_zh || paper.title_en
               }))}
@@ -61,7 +65,7 @@ export default function AuthorPaymentsPage() {
               searchable
               nothingFoundMessage="暂无论文"
             />
-            {payments?.some((item) => item.status !== 'Paid') && (
+            {paymentList.some((item) => item.status !== 'Paid') && (
               <Button variant="light" disabled>
                 待支付
               </Button>
@@ -82,7 +86,7 @@ export default function AuthorPaymentsPage() {
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>
-                    {(payments || []).map((payment) => (
+                    {paymentList.map((payment) => (
                       <Table.Tr key={payment.payment_id}>
                         <Table.Td>{payment.payment_id}</Table.Td>
                         <Table.Td>{payment.amount || '—'}</Table.Td>
@@ -100,7 +104,7 @@ export default function AuthorPaymentsPage() {
                     ))}
                   </Table.Tbody>
                 </Table>
-                {payments?.length === 0 && <Text>暂无支付记录。</Text>}
+                {paymentList.length === 0 && <Text>暂无支付记录。</Text>}
               </Stack>
             </Card>
           )}
