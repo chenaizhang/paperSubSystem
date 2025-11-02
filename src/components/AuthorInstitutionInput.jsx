@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Group, ActionIcon, Stack, Text, Card } from "@mantine/core";
+import { Group, ActionIcon, Stack, Text, Card, Checkbox } from "@mantine/core";
 import { IconTrash } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import AuthorSearch from "./AuthorSearch.jsx";
@@ -22,7 +22,9 @@ export default function AuthorInstitutionInput({
   canRemove = true,
   errors = {},
 }) {
-  const [authorLocked, setAuthorLocked] = useState(false);
+  const [authorLocked, setAuthorLocked] = useState(Boolean(value?.institution_id));
+  const normalizedAuthorId =
+    value?.author_id == null ? null : String(value.author_id);
 
   // 获取当前用户的个人信息
   const { data: userProfile } = useQuery({
@@ -45,9 +47,12 @@ export default function AuthorInstitutionInput({
     const authorInfo = author && typeof author === "object" ? author : null;
 
     onChange({
+      ...value,
       author_id: authorId,
       author_info: authorInfo,
       institution_id: null,
+      institution_info: null,
+      is_corresponding: isFirstAuthor ? true : Boolean(value?.is_corresponding),
     });
 
     // 重置作者锁定状态
@@ -55,14 +60,45 @@ export default function AuthorInstitutionInput({
   };
 
   // 处理单位变更
-  const handleInstitutionChange = (institutionId) => {
+  const handleInstitutionChange = (institution) => {
+    if (!institution) {
+      onChange({
+        ...value,
+        institution_id: null,
+        institution_info: null,
+        is_corresponding: isFirstAuthor ? true : Boolean(value?.is_corresponding),
+      });
+      setAuthorLocked(false);
+      return;
+    }
+
+    const institutionSource =
+      typeof institution === "object"
+        ? institution
+        : { institution_id: institution };
+    const rawId =
+      institutionSource.institution_id ?? institutionSource.id ?? institution;
+    const normalizedId =
+      rawId === undefined || rawId === null ? null : String(rawId);
+    const institutionInfo = {
+      institution_id: normalizedId,
+      name:
+        institutionSource.name ||
+        institutionSource.institution_name ||
+        value?.institution_info?.name ||
+        "",
+      city: institutionSource.city,
+      province: institutionSource.province,
+    };
+
     onChange({
       ...value,
-      institution_id: institutionId,
+      institution_id: normalizedId,
+      institution_info: institutionInfo,
     });
 
     // 当选择单位后，锁定作者输入框
-    if (institutionId) {
+    if (normalizedId) {
       setAuthorLocked(true);
     } else {
       setAuthorLocked(false);
@@ -74,34 +110,80 @@ export default function AuthorInstitutionInput({
     if (isFirstAuthor && userProfile && !value.author_id) {
       // 自动设置第一作者为当前用户，使用API返回的author_id和name
       onChange({
+        ...value,
         author_id: userProfile.author_id,
         author_info: {
           author_id: userProfile.author_id,
           name: userProfile.name,
         },
         institution_id: null,
+        institution_info: null,
+        is_corresponding: true,
       });
     }
   }, [isFirstAuthor, userProfile, value.author_id, onChange]);
 
+  useEffect(() => {
+    setAuthorLocked(Boolean(value?.institution_id));
+  }, [value?.institution_id]);
+
+  useEffect(() => {
+    if (isFirstAuthor && value?.is_corresponding !== true) {
+      onChange({
+        ...value,
+        is_corresponding: true,
+      });
+    }
+  }, [isFirstAuthor, value?.is_corresponding, value, onChange]);
+
+  const normalizedProfileAuthorId =
+    userProfile?.author_id == null ? null : String(userProfile.author_id);
+  const matchesUserProfile =
+    normalizedAuthorId && normalizedProfileAuthorId
+      ? normalizedAuthorId === normalizedProfileAuthorId
+      : false;
+
   // 判断是否为锁定状态
   const isAuthorLocked =
-    authorLocked || (isFirstAuthor && userProfile && value.author_id === userProfile.author_id);
+    Boolean(isFirstAuthor && normalizedAuthorId) ||
+    authorLocked ||
+    (isFirstAuthor && matchesUserProfile);
   const isInstitutionDisabled = !value.author_id;
+  const isCorresponding = isFirstAuthor ? true : Boolean(value?.is_corresponding);
+
+  const handleCorrespondingChange = (event) => {
+    const checked = event.currentTarget.checked;
+    if (isFirstAuthor) {
+      return;
+    }
+    onChange({
+      ...value,
+      is_corresponding: checked,
+    });
+  };
 
   return (
     <Card withBorder>
-      <Group justify="space-between" mb="sm">
+      <Group justify="space-between" align="center" mb="sm">
         <Text fw={500}>作者 {index + 1}</Text>
-        {canRemove && !isFirstAuthor && (
-          <ActionIcon
-            color="red"
-            onClick={onRemove}
-            aria-label="删除作者"
-          >
-            <IconTrash size={16} />
-          </ActionIcon>
-        )}
+        <Group gap="xs" align="center">
+          <Checkbox
+            label="通讯作者"
+            checked={isCorresponding}
+            onChange={handleCorrespondingChange}
+            disabled={isFirstAuthor}
+            aria-label="是否为通讯作者"
+          />
+          {canRemove && !isFirstAuthor && (
+            <ActionIcon
+              color="red"
+              onClick={onRemove}
+              aria-label="删除作者"
+            >
+              <IconTrash size={16} />
+            </ActionIcon>
+          )}
+        </Group>
       </Group>
       
       <Stack gap="sm">
@@ -136,9 +218,16 @@ export default function AuthorInstitutionInput({
         </Group>
 
         {/* 状态提示 */}
-        {isFirstAuthor && userProfile && value.author_id === userProfile.author_id && (
+        {isFirstAuthor && matchesUserProfile && (
           <Text size="xs" c="blue">
             作者1已自动锁定为当前账号所有人：{userProfile.name}
+          </Text>
+        )}
+        {isFirstAuthor &&
+          normalizedAuthorId &&
+          (!userProfile || !matchesUserProfile) && (
+          <Text size="xs" c="blue">
+            第一作者姓名已锁定，无法修改
           </Text>
         )}
 
@@ -160,10 +249,11 @@ export default function AuthorInstitutionInput({
 
 AuthorInstitutionInput.propTypes = {
   value: PropTypes.shape({
-    author_id: PropTypes.number,
+    author_id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
     author_info: PropTypes.object,
-    institution_id: PropTypes.number,
+    institution_id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
     institution_info: PropTypes.object, // 新增：机构信息对象
+    is_corresponding: PropTypes.bool,
   }),
   onChange: PropTypes.func.isRequired,
   onRemove: PropTypes.func,

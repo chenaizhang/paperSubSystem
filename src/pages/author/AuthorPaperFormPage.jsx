@@ -49,7 +49,15 @@ const initialValues = {
   keywords_en: [],
   fund_name: '',
   fund_code: '',
-  authors: [{ author_id: null, institution_id: null }],
+  authors: [
+    {
+      author_id: null,
+      author_info: null,
+      institution_id: null,
+      institution_info: null,
+      is_corresponding: true
+    }
+  ],
   attachment: null
 };
 
@@ -127,20 +135,50 @@ export default function AuthorPaperFormPage({ mode }) {
 
       // 处理作者信息：包含姓名、机构和通讯作者标识
       const processAuthors = (authorsArray) => {
-        if (!Array.isArray(authorsArray)) return [{ author_id: null, institution_id: null }];
-        return authorsArray.map(author => ({
-          author_id: author.author_id || null,
-          author_info: author.author_id ? {
-            author_id: author.author_id,
-            name: author.name || '',
-          } : null,
-          institution_id: author.institution_id || null,
-          institution_info: author.institution_id ? {
-            institution_id: author.institution_id,
-            name: author.institution_name || '',
-          } : null,
-          is_corresponding: Boolean(author.is_corresponding)
-        }));
+        if (!Array.isArray(authorsArray)) {
+          return [
+            {
+              author_id: null,
+              author_info: null,
+              institution_id: null,
+              institution_info: null
+            }
+          ];
+        }
+        const processed = authorsArray.map((author, idx) => {
+          const rawAuthorId = author?.author_id ?? author?.id ?? null;
+          const authorId = rawAuthorId == null ? null : String(rawAuthorId);
+          const rawInstitutionId =
+            author?.institution_id ?? author?.default_institution_id ?? null;
+          const institutionId =
+            rawInstitutionId == null ? null : String(rawInstitutionId);
+          const institutionName =
+            author?.institution_name ||
+            author?.institution ||
+            author?.institution_full_name ||
+            '';
+          return {
+            author_id: authorId,
+            author_info: authorId
+              ? {
+                  author_id: authorId,
+                  name: author.name || ''
+                }
+              : null,
+            institution_id: institutionId,
+            institution_info: institutionName
+              ? {
+                  institution_id: institutionId,
+                  name: institutionName
+                }
+              : null,
+            is_corresponding: idx === 0 ? true : Boolean(author?.is_corresponding)
+          };
+        });
+        if (processed.length > 0) {
+          processed[0].is_corresponding = true;
+        }
+        return processed;
       };
 
       // 处理基金信息：提取第一个基金的名称和编号
@@ -266,7 +304,10 @@ export default function AuthorPaperFormPage({ mode }) {
         authors: [
           {
             author_id: null, // 让组件自动处理第一作者锁定
-            institution_id: null
+            author_info: null,
+            institution_id: null,
+            institution_info: null,
+            is_corresponding: true
           }
         ]
       }));
@@ -319,16 +360,18 @@ export default function AuthorPaperFormPage({ mode }) {
       if (item?.author_id == null || item.author_id === '') {
         return;
       }
-      authors.push(String(item.author_id));
+      const authorId = String(item.author_id);
+      authors.push(authorId);
       if (item?.institution_id != null && item.institution_id !== '') {
         institutions.push(String(item.institution_id));
       }
-      const flag =
-        typeof item?.is_corresponding === 'boolean'
-          ? item.is_corresponding
-          : authors.length === 1;
+      const flag = typeof item?.is_corresponding === 'boolean' ? item.is_corresponding : false;
       isCorresponding.push(flag);
     });
+
+    if (isCorresponding.length > 0) {
+      isCorresponding[0] = true;
+    }
 
     return { authors, institutions, isCorresponding };
   };
@@ -618,7 +661,13 @@ export default function AuthorPaperFormPage({ mode }) {
                   leftSection={<IconPlus size={16} />}
                   variant="light"
                   onClick={() =>
-                    form.insertListItem('authors', { author_id: null, institution_id: null })
+                    form.insertListItem('authors', {
+                      author_id: null,
+                      author_info: null,
+                      institution_id: null,
+                      institution_info: null,
+                      is_corresponding: false
+                    })
                   }
                 >
                   添加作者

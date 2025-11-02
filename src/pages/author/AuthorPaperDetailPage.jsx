@@ -32,6 +32,7 @@ import {
   getReviewStatusLabel,
   normalizeReviewStatus
 } from '../../utils/reviewStatus.js';
+import { normalizeProgressStatus } from '../../utils/progressStatus.js';
 import { useAuth } from '../../features/auth/AuthProvider.jsx';
 
 export default function AuthorPaperDetailPage() {
@@ -127,6 +128,7 @@ export default function AuthorPaperDetailPage() {
     return mapped;
   }, [progress, submissionDate]);
 
+  const normalizedProgress = normalizeProgressStatus(paper?.progress);
   const reviewStatus = normalizeReviewStatus(paper?.status);
   // 仅在小修或大修评审意见下展示上传区，与业务约定保持一致。
   const canSubmitRevision = ['Minor Revision', 'Major Revision'].includes(reviewStatus);
@@ -222,6 +224,8 @@ export default function AuthorPaperDetailPage() {
     }
   };
 
+  const canEditPaperInfo = normalizedProgress === 'Revisioning' && isCorrespondingAuthor;
+
   return (
     <Stack gap="xl">
       <Group justify="space-between">
@@ -231,7 +235,7 @@ export default function AuthorPaperDetailPage() {
             提交日期：{paper?.submission_date ? dayjs(paper.submission_date).format('YYYY-MM-DD') : '—'}
           </Text>
         </div>
-        {isCorrespondingAuthor && (
+        {canEditPaperInfo && (
           <Button variant="light" onClick={() => navigate(`/author/papers/${paperId}/edit`)}>
             编辑信息
           </Button>

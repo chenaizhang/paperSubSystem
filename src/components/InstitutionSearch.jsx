@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Combobox, InputBase, useCombobox, Text, Loader, Paper, Stack, Button, ScrollArea } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import api from "../api/axios.js";
@@ -23,6 +23,9 @@ export default function InstitutionSearch({
   const [searchValue, setSearchValue] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
 
+  const normalizeId = (val) =>
+    val === undefined || val === null ? null : String(val);
+
   const combobox = useCombobox({
     onDropdownClose: () => {
       combobox.resetSelectedOption();
@@ -44,20 +47,56 @@ export default function InstitutionSearch({
   });
 
   // 当前选中的机构信息
-  const selectedInstitution = useMemo(() => {
-    if (!value) return null;
-    
-    // 优先使用传入的机构信息
-    if (institutionInfo && institutionInfo.institution_id === value) {
-      return institutionInfo;
+  const normalizedValue = useMemo(() => {
+    if (typeof value === "object" && value !== null) {
+      return normalizeId(value.institution_id ?? value.id);
     }
-    
-    // 从查询结果中查找
-    return (
-      institutions.find((inst) => inst.institution_id === value) ||
-      (typeof value === "object" ? value : null)
-    );
-  }, [value, institutions, institutionInfo]);
+    return normalizeId(value);
+  }, [value]);
+
+  const selectedInstitution = useMemo(() => {
+    const normalizeInstitution = (inst) => {
+      if (!inst) return null;
+      const id = normalizeId(inst.institution_id ?? inst.id);
+      return {
+        ...inst,
+        institution_id: id,
+        name:
+          inst.name ||
+          inst.institution_name ||
+          inst.full_name ||
+          inst.title ||
+          "",
+      };
+    };
+
+    if (normalizedValue) {
+      const normalizedInstitutionInfoId = normalizeId(
+        institutionInfo?.institution_id ?? institutionInfo?.id
+      );
+
+      if (institutionInfo && normalizedInstitutionInfoId === normalizedValue) {
+        return normalizeInstitution(institutionInfo);
+      }
+
+      const matched =
+        institutions.find(
+          (inst) => normalizeId(inst.institution_id) === normalizedValue
+        ) || (typeof value === "object" ? value : null);
+
+      return normalizeInstitution(matched);
+    }
+
+    if (institutionInfo) {
+      return normalizeInstitution(institutionInfo);
+    }
+
+    if (typeof value === "object" && value !== null) {
+      return normalizeInstitution(value);
+    }
+
+    return null;
+  }, [normalizedValue, institutionInfo, institutions, value]);
 
   // 显示文本
   const displayValue = useMemo(() => {
@@ -67,7 +106,12 @@ export default function InstitutionSearch({
 
   // 处理选择
   const handleSelect = (institution) => {
-    onChange(institution.institution_id);
+    onChange({
+      ...institution,
+      institution_id: normalizeId(
+        institution.institution_id ?? institution.id
+      ),
+    });
     setSearchValue("");
     setShowDropdown(false);
     combobox.closeDropdown();
@@ -76,22 +120,8 @@ export default function InstitutionSearch({
   // 处理清空
   const handleClear = () => {
     onChange(null);
+    setSearchValue("");
   };
-
-  // 选项列表
-  const options = institutions.map((institution) => (
-    <Combobox.Option
-      value={institution.institution_id.toString()}
-      key={institution.institution_id}
-    >
-      <div>
-        <Text size="sm">{institution.name}</Text>
-        <Text size="xs" c="dimmed">
-          {institution.city} {institution.zip_code}
-        </Text>
-      </div>
-    </Combobox.Option>
-  ));
 
   const isDisabled = !authorId || disabled;
 
@@ -242,13 +272,13 @@ export default function InstitutionSearch({
 }
 
 InstitutionSearch.propTypes = {
-  value: PropTypes.oneOfType([PropTypes.number, PropTypes.object]),
+  value: PropTypes.oneOfType([PropTypes.number, PropTypes.string, PropTypes.object]),
   onChange: PropTypes.func.isRequired,
   label: PropTypes.string,
   placeholder: PropTypes.string,
   required: PropTypes.bool,
   disabled: PropTypes.bool,
-  authorId: PropTypes.number,
+  authorId: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
   institutionInfo: PropTypes.object, // 新增：机构信息对象
   error: PropTypes.string,
 };

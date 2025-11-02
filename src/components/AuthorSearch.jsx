@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Combobox, InputBase, useCombobox, Text, Loader, Paper, Stack, Button, ScrollArea } from "@mantine/core";
 import { useDebouncedValue } from "@mantine/hooks";
 import { useQuery } from "@tanstack/react-query";
@@ -28,6 +28,9 @@ export default function AuthorSearch({
     onDropdownClose: () => combobox.resetSelectedOption(),
   });
 
+  const normalizedCurrentUserId =
+    currentUserId == null ? null : String(currentUserId);
+
   // 查询作者列表
   const { data: authors = [], isLoading } = useQuery({
     queryKey: ["authors-search", debouncedSearchValue],
@@ -56,23 +59,40 @@ export default function AuthorSearch({
     if (typeof value === "number") {
       return authors.find((author) => author.author_id === value) || null;
     }
+    if (typeof value === "string") {
+      return (
+        authors.find(
+          (author) => String(author.author_id) === value
+        ) || null
+      );
+    }
 
     return null;
   }, [value, authors]);
 
   // 显示文本
+  const normalizedSelectedAuthorId =
+    selectedAuthor?.author_id == null
+      ? null
+      : String(selectedAuthor.author_id);
+  const shouldLockFirstAuthor =
+    isFirstAuthor &&
+    normalizedSelectedAuthorId &&
+    normalizedCurrentUserId &&
+    normalizedSelectedAuthorId === normalizedCurrentUserId;
+
   const displayValue = useMemo(() => {
     if (!selectedAuthor) return "";
 
     if (
       locked ||
-      (isFirstAuthor && currentUserId === selectedAuthor.author_id)
+      shouldLockFirstAuthor
     ) {
       return `${selectedAuthor.name} / ID: ${selectedAuthor.author_id} (已锁定)`;
     }
 
     return `${selectedAuthor.name} / ID: ${selectedAuthor.author_id}`;
-  }, [selectedAuthor, locked, isFirstAuthor, currentUserId]);
+  }, [selectedAuthor, locked, shouldLockFirstAuthor]);
 
   // 处理选择
   const handleSelect = (author) => {
@@ -85,7 +105,7 @@ export default function AuthorSearch({
   const handleClear = () => {
     if (
       locked ||
-      (isFirstAuthor && selectedAuthor?.author_id === currentUserId)
+      shouldLockFirstAuthor
     ) {
       return; // 锁定状态不允许清空
     }
@@ -94,7 +114,7 @@ export default function AuthorSearch({
   };
 
   const isLocked =
-    locked || (isFirstAuthor && selectedAuthor?.author_id === currentUserId);
+    locked || shouldLockFirstAuthor;
 
   // 是否显示联想建议
   const showSuggestions = !isLocked && debouncedSearchValue && authors.length > 0;

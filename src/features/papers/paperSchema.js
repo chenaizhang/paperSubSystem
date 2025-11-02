@@ -23,7 +23,8 @@ const basePaperSchema = z.object({
     .array(
       z.object({
         author_id: z.union([z.string(), z.number()]).refine((val) => val !== '', '请选择作者'),
-        institution_id: z.union([z.string(), z.number()]).refine((val) => val !== '', '请选择单位')
+        institution_id: z.union([z.string(), z.number()]).refine((val) => val !== '', '请选择单位'),
+        is_corresponding: z.boolean().optional()
       })
     )
     .min(1, '至少关联一位作者')
