@@ -8,7 +8,6 @@ import {
   Button,
   Card,
   Group,
-  HoverCard,
   LoadingOverlay,
   Select,
   Stack,
@@ -27,18 +26,12 @@ import api from "../../api/axios.js";
 import { endpoints } from "../../api/endpoints.js";
 import { ensureArray } from "../../utils/ensureArray.js";
 import {
-  deriveCurrentStage,
-  mapProgressToStages,
-} from "../../utils/paperProgress.js";
-import {
-  REVIEW_STATUS_OPTIONS,
-  getReviewStatusLabel,
-  getReviewStatusColor,
-} from "../../utils/reviewStatus.js";
+  getProgressStatusColor,
+  getProgressStatusLabel,
+} from "../../utils/progressStatus.js";
 
 export default function AuthorPapersListPage() {
-  // 三类筛选条件：评审意见、关键字、时间区间
-  const [status, setStatus] = useState("all");
+  // 两类筛选条件：关键字、时间区间
   const [keyword, setKeyword] = useState("");
   const [dateRange, setDateRange] = useState([null, null]);
   const navigate = useNavigate();
@@ -48,10 +41,9 @@ export default function AuthorPapersListPage() {
    * 注意：后端分页能力未在文档体现，如需支持可在 params 中加 page/pageSize。
    */
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ["papers", "author", { status, keyword, dateRange }],
+    queryKey: ["papers", "author", { keyword, dateRange }],
     queryFn: async () => {
       const params = {};
-      if (status !== "all") params.status = status;
       if (keyword) params.keyword = keyword;
       if (dateRange[0])
         params.start_date = dayjs(dateRange[0]).format("YYYY-MM-DD");
@@ -64,43 +56,6 @@ export default function AuthorPapersListPage() {
 
   const paperList = useMemo(() => ensureArray(data), [data]);
 
-  const {
-    data: progressList,
-    isLoading: isProgressLoading,
-    error: progressError,
-  } = useQuery({
-    queryKey: ["papers", "progress", "author"],
-    queryFn: async () => {
-      const response = await api.get(endpoints.papers.progressList);
-      return response.data ?? [];
-    },
-  });
-
-  const progressArray = useMemo(
-    () => ensureArray(progressList),
-    [progressList]
-  );
-
-  const progressIndex = useMemo(() => {
-    const map = new Map();
-    progressArray.forEach((progress) => {
-      const paperId = progress.paper_id ?? progress.id;
-      if (paperId === undefined || paperId === null) {
-        return;
-      }
-      const stages = mapProgressToStages(progress);
-      const activeStage =
-        stages.find((stage) => stage.status !== "finished") ||
-        stages[stages.length - 1];
-      map.set(String(paperId), {
-        currentStage: deriveCurrentStage(progress),
-        currentStageStatus: activeStage?.statusText,
-        currentStageColor: activeStage?.color || "blue",
-      });
-    });
-    return map;
-  }, [progressArray]);
-
   /**
    * 将接口数据映射成表格行：保持纯函数式，以便 React 在查询更新时最小化 diff。
    * 处理 paper_id/id 混用，以兼容旧数据。
@@ -108,12 +63,9 @@ export default function AuthorPapersListPage() {
   const rows = useMemo(() => {
     return paperList.map((paper) => {
       const paperId = paper.paper_id || paper.id;
-      const progress =
-        paperId !== undefined ? progressIndex.get(String(paperId)) : undefined;
-      const stageLabel =
-        progress?.currentStage || paper.current_stage || "待更新";
-      const stageStatus = progress?.currentStageStatus;
-      const stageColor = progress?.currentStageColor || "gray";
+      const progressValue = paper.progress ?? paper.status;
+      const progressLabel = getProgressStatusLabel(progressValue);
+      const progressColor = getProgressStatusColor(progressValue);
 
       return (
         <Table.Tr key={paperId}>
@@ -134,18 +86,10 @@ export default function AuthorPapersListPage() {
               : "—"}
           </Table.Td>
           <Table.Td>
-            <Badge color={getReviewStatusColor(paper.status)}>
-              {getReviewStatusLabel(paper.status)}
-            </Badge>
-          </Table.Td>
-          <Table.Td>
             <Stack gap={4}>
-              <Text size="sm">{stageLabel}</Text>
-              {stageStatus && (
-                <Badge size="sm" variant="light" color={stageColor}>
-                  {stageStatus}
-                </Badge>
-              )}
+              <Badge variant="light" color={progressColor}>
+                {progressLabel}
+              </Badge>
             </Stack>
           </Table.Td>
           <Table.Td>
@@ -160,7 +104,7 @@ export default function AuthorPapersListPage() {
         </Table.Tr>
       );
     });
-  }, [paperList, navigate, progressIndex]);
+  }, [paperList, navigate]);
 
   return (
     <Stack gap="xl">
@@ -170,16 +114,10 @@ export default function AuthorPapersListPage() {
       </Group>
       <Card withBorder shadow="sm" radius="md" pos="relative">
         <LoadingOverlay
-          visible={isLoading || isFetching || isProgressLoading}
+          visible={isLoading || isFetching}
           overlayProps={{ blur: 2 }}
         />
         <Group mb="md" wrap="wrap" gap="md">
-          <Select
-            data={REVIEW_STATUS_OPTIONS}
-            value={status}
-            onChange={(value) => setStatus(value || "all")}
-            aria-label="按评审意见筛选"
-          />
           <DatePickerInput
             type="range"
             value={dateRange}
@@ -206,18 +144,12 @@ export default function AuthorPapersListPage() {
               <Table.Th>ID</Table.Th>
               <Table.Th>标题</Table.Th>
               <Table.Th>提交日期</Table.Th>
-              <Table.Th>评审意见</Table.Th>
               <Table.Th>当前进度</Table.Th>
               <Table.Th>操作</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>{rows}</Table.Tbody>
         </Table>
-        {progressError && (
-          <Text size="sm" c="red" mt="sm">
-            无法获取最新进度，列表中显示的阶段基于已有数据。
-          </Text>
-        )}
         {paperList.length === 0 && <Text mt="md">暂无数据，去提交论文。</Text>}
       </Card>
     </Stack>

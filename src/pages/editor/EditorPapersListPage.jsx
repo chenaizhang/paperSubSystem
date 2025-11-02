@@ -22,6 +22,7 @@ import dayjs from "dayjs";
 import {
   PROGRESS_STATUS_FILTER_OPTIONS,
   getProgressStatusLabel,
+  getProgressStatusColor,
 } from "../../utils/progressStatus.js";
 import {
   getIntegrityStatusColor,
@@ -106,7 +107,10 @@ export default function EditorPapersListPage() {
               : "—"}
           </Table.Td>
           <Table.Td>
-            <Badge>
+            <Badge
+              color={getProgressStatusColor(paper.progress ?? paper.status)}
+              variant="light"
+            >
               {getProgressStatusLabel(paper.progress ?? paper.status)}
             </Badge>
           </Table.Td>

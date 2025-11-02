@@ -35,6 +35,7 @@ import {
 } from "../../utils/integrityStatus.js";
 import {
   getProgressStatusLabel,
+  getProgressStatusColor,
   normalizeProgressStatus,
 } from "../../utils/progressStatus.js";
 
@@ -535,7 +536,10 @@ export default function EditorPaperDetailPage() {
         <Stack gap="md">
           <Group gap="xs">
             {paper && (
-              <Badge color="blue">
+              <Badge
+                color={getProgressStatusColor(paper.progress)}
+                variant="light"
+              >
                 {getProgressStatusLabel(paper.progress)}
               </Badge>
             )}

@@ -16,24 +16,28 @@ import {
   Title,
   Timeline,
   SimpleGrid,
-  Table
-} from '@mantine/core';
-import { IconDownload, IconSend } from '@tabler/icons-react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import api from '../../api/axios.js';
-import { endpoints } from '../../api/endpoints.js';
-import dayjs from 'dayjs';
-import { useMemo, useState } from 'react';
-import { notifications } from '@mantine/notifications';
-import { mapProgressToStages } from '../../utils/paperProgress.js';
+  Table,
+} from "@mantine/core";
+import { IconDownload, IconSend } from "@tabler/icons-react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import api from "../../api/axios.js";
+import { endpoints } from "../../api/endpoints.js";
+import dayjs from "dayjs";
+import { useMemo, useState } from "react";
+import { notifications } from "@mantine/notifications";
+import { mapProgressToStages } from "../../utils/paperProgress.js";
 import {
   getReviewStatusColor,
   getReviewStatusLabel,
-  normalizeReviewStatus
-} from '../../utils/reviewStatus.js';
-import { normalizeProgressStatus } from '../../utils/progressStatus.js';
-import { useAuth } from '../../features/auth/AuthProvider.jsx';
+  normalizeReviewStatus,
+} from "../../utils/reviewStatus.js";
+import {
+  getProgressStatusColor,
+  getProgressStatusLabel,
+  normalizeProgressStatus,
+} from "../../utils/progressStatus.js";
+import { useAuth } from "../../features/auth/AuthProvider.jsx";
 
 export default function AuthorPaperDetailPage() {
   const { paperId } = useParams();
@@ -43,33 +47,33 @@ export default function AuthorPaperDetailPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const { userId } = useAuth();
   const { data: profile } = useQuery({
-    queryKey: ['profile'],
+    queryKey: ["profile"],
     queryFn: async () => {
       const response = await api.get(endpoints.users.profile);
       return response.data;
-    }
+    },
   });
 
   // 单篇论文详情：缓存 key 带上 paperId，方便提交后针对性失效。
   const { data: paper, isLoading } = useQuery({
-    queryKey: ['paper', paperId],
+    queryKey: ["paper", paperId],
     queryFn: async () => {
       const response = await api.get(endpoints.papers.detail(paperId));
       return response.data;
-    }
+    },
   });
 
   const {
     data: progress,
     isLoading: isProgressLoading,
-    error: progressError
+    error: progressError,
   } = useQuery({
-    queryKey: ['paper-progress', paperId],
+    queryKey: ["paper-progress", paperId],
     queryFn: async () => {
       const response = await api.get(endpoints.papers.progress(paperId));
       return response.data;
     },
-    enabled: Boolean(paperId)
+    enabled: Boolean(paperId),
   });
 
   /**
@@ -79,41 +83,47 @@ export default function AuthorPaperDetailPage() {
   const updateMutation = useMutation({
     mutationFn: async (file) => {
       const formData = new FormData();
-      formData.append('attachment', file);
-      const response = await api.put(endpoints.papers.detail(paperId), formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        onUploadProgress: (event) => {
-          if (event.total) {
-            setUploadProgress(Math.round((event.loaded * 100) / event.total));
-          }
+      formData.append("attachment", file);
+      const response = await api.put(
+        endpoints.papers.detail(paperId),
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+          onUploadProgress: (event) => {
+            if (event.total) {
+              setUploadProgress(Math.round((event.loaded * 100) / event.total));
+            }
+          },
         }
-      });
+      );
       return response.data;
     },
     onSuccess: () => {
       notifications.show({
-        title: '修改稿已提交',
-        message: '请等待编辑部审核',
-        color: 'green'
+        title: "修改稿已提交",
+        message: "请等待编辑部审核",
+        color: "green",
       });
-      queryClient.invalidateQueries({ queryKey: ['paper', paperId] });
+      queryClient.invalidateQueries({ queryKey: ["paper", paperId] });
     },
     onError: (error) => {
       notifications.show({
-        title: '提交失败',
-        message: error.friendlyMessage || '提交修改稿失败，请稍后再试',
-        color: 'red'
+        title: "提交失败",
+        message: error.friendlyMessage || "提交修改稿失败，请稍后再试",
+        color: "red",
       });
     },
     onSettled: () => {
       setTimeout(() => setUploadProgress(0), 400);
-    }
+    },
   });
 
   // 关键词可能是字符串数组，或 [id, label] 形式的二维数组，这里做统一处理
   const normalizeKeywords = (list) => {
     if (!Array.isArray(list)) return [];
-    return list.map((item) => (Array.isArray(item) ? item[1] : item)).filter(Boolean);
+    return list
+      .map((item) => (Array.isArray(item) ? item[1] : item))
+      .filter(Boolean);
   };
 
   const submissionDate = paper?.submission_date;
@@ -122,7 +132,9 @@ export default function AuthorPaperDetailPage() {
     const mapped = mapProgressToStages(progress);
     if (submissionDate) {
       return mapped.map((stage) =>
-        stage.key === 'submission' && !stage.time ? { ...stage, time: submissionDate } : stage
+        stage.key === "submission" && !stage.time
+          ? { ...stage, time: submissionDate }
+          : stage
       );
     }
     return mapped;
@@ -130,12 +142,20 @@ export default function AuthorPaperDetailPage() {
 
   const normalizedProgress = normalizeProgressStatus(paper?.progress);
   const reviewStatus = normalizeReviewStatus(paper?.status);
+  const progressLabel = getProgressStatusLabel(
+    paper?.progress ?? paper?.status
+  );
+  const progressColor = getProgressStatusColor(
+    paper?.progress ?? paper?.status
+  );
   // 仅在小修或大修评审意见下展示上传区，与业务约定保持一致。
-  const canSubmitRevision = ['Minor Revision', 'Major Revision'].includes(reviewStatus);
+  const canSubmitRevision = ["Minor Revision", "Major Revision"].includes(
+    reviewStatus
+  );
   const currentAuthorIds = useMemo(() => {
     const ids = new Set();
     const add = (val) => {
-      if (val === undefined || val === null || val === '') return;
+      if (val === undefined || val === null || val === "") return;
       ids.add(String(val));
     };
     add(profile?.author_id);
@@ -149,7 +169,10 @@ export default function AuthorPaperDetailPage() {
     });
     return Array.from(ids);
   }, [profile]);
-  const normalizedUserId = useMemo(() => (userId != null ? String(userId) : null), [userId]);
+  const normalizedUserId = useMemo(
+    () => (userId != null ? String(userId) : null),
+    [userId]
+  );
   const isCorrespondingAuthor = useMemo(() => {
     if (!Array.isArray(paper?.authors)) {
       return false;
@@ -157,7 +180,8 @@ export default function AuthorPaperDetailPage() {
     return paper.authors.some(
       (author) =>
         author?.is_corresponding &&
-        ((author?.author_id != null && currentAuthorIds.includes(String(author.author_id))) ||
+        ((author?.author_id != null &&
+          currentAuthorIds.includes(String(author.author_id))) ||
           (author?.user_id != null &&
             normalizedUserId &&
             String(author.user_id) === normalizedUserId))
@@ -170,9 +194,9 @@ export default function AuthorPaperDetailPage() {
       const star = /filename\*=(?:UTF-8''|)([^;\n]+)/i.exec(disposition);
       if (star && star[1]) {
         try {
-          return decodeURIComponent(star[1].replace(/\"/g, '').trim());
+          return decodeURIComponent(star[1].replace(/\"/g, "").trim());
         } catch (_) {
-          return star[1].replace(/\"/g, '').trim();
+          return star[1].replace(/\"/g, "").trim();
         }
       }
       const normal = /filename=("?)([^";\n]+)\1/i.exec(disposition);
@@ -180,26 +204,34 @@ export default function AuthorPaperDetailPage() {
       return null;
     };
     const extFromMime = (mime) => {
-      const m = (mime || '').toLowerCase();
-      if (m.includes('pdf')) return 'pdf';
-      if (m.includes('msword')) return 'doc';
-      if (m.includes('officedocument.wordprocessingml.document')) return 'docx';
-      if (m.includes('zip')) return 'zip';
-      if (m.includes('rar')) return 'rar';
-      if (m.includes('7z')) return '7z';
-      if (m.includes('jpeg')) return 'jpg';
-      if (m.includes('jpg')) return 'jpg';
-      if (m.includes('png')) return 'png';
-      if (m.includes('gif')) return 'gif';
-      if (m.includes('plain')) return 'txt';
-      return 'bin';
+      const m = (mime || "").toLowerCase();
+      if (m.includes("pdf")) return "pdf";
+      if (m.includes("msword")) return "doc";
+      if (m.includes("officedocument.wordprocessingml.document")) return "docx";
+      if (m.includes("zip")) return "zip";
+      if (m.includes("rar")) return "rar";
+      if (m.includes("7z")) return "7z";
+      if (m.includes("jpeg")) return "jpg";
+      if (m.includes("jpg")) return "jpg";
+      if (m.includes("png")) return "png";
+      if (m.includes("gif")) return "gif";
+      if (m.includes("plain")) return "txt";
+      return "bin";
     };
 
     try {
-      const resp = await api.get(endpoints.papers.download(paperId), { responseType: 'blob' });
-      const disposition = resp.headers['content-disposition'] || resp.headers['Content-Disposition'];
+      const resp = await api.get(endpoints.papers.download(paperId), {
+        responseType: "blob",
+      });
+      const disposition =
+        resp.headers["content-disposition"] ||
+        resp.headers["Content-Disposition"];
       const blob = resp.data;
-      const mime = blob?.type || resp.headers['content-type'] || resp.headers['Content-Type'] || '';
+      const mime =
+        blob?.type ||
+        resp.headers["content-type"] ||
+        resp.headers["Content-Type"] ||
+        "";
 
       let filename = parseFilename(disposition) || `paper-${paperId}`;
       if (!/\.[a-z0-9]+$/i.test(filename)) {
@@ -208,7 +240,7 @@ export default function AuthorPaperDetailPage() {
       }
 
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
       a.download = filename;
       document.body.appendChild(a);
@@ -217,26 +249,33 @@ export default function AuthorPaperDetailPage() {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       notifications.show({
-        title: '下载失败',
-        message: error.friendlyMessage || '文件下载失败',
-        color: 'red'
+        title: "下载失败",
+        message: error.friendlyMessage || "文件下载失败",
+        color: "red",
       });
     }
   };
 
-  const canEditPaperInfo = normalizedProgress === 'Revisioning' && isCorrespondingAuthor;
+  const canEditPaperInfo =
+    normalizedProgress === "Revisioning" && isCorrespondingAuthor;
 
   return (
     <Stack gap="xl">
       <Group justify="space-between">
         <div>
-          <Title order={2}>{paper?.title_zh || '论文详情'}</Title>
+          <Title order={2}>{paper?.title_zh || "论文详情"}</Title>
           <Text size="sm" c="dimmed">
-            提交日期：{paper?.submission_date ? dayjs(paper.submission_date).format('YYYY-MM-DD') : '—'}
+            提交日期：
+            {paper?.submission_date
+              ? dayjs(paper.submission_date).format("YYYY-MM-DD")
+              : "—"}
           </Text>
         </div>
         {canEditPaperInfo && (
-          <Button variant="light" onClick={() => navigate(`/author/papers/${paperId}/edit`)}>
+          <Button
+            variant="light"
+            onClick={() => navigate(`/author/papers/${paperId}/edit`)}
+          >
             编辑信息
           </Button>
         )}
@@ -246,17 +285,19 @@ export default function AuthorPaperDetailPage() {
         <LoadingOverlay visible={isLoading} overlayProps={{ blur: 2 }} />
         <Stack gap="md">
           <Group gap="xs">
-            <Badge color={getReviewStatusColor(paper?.status)}>
+            <Badge color={getReviewStatusColor(paper?.status)} variant="filled">
               {getReviewStatusLabel(paper?.status)}
             </Badge>
-            {paper?.current_stage && <Badge variant="light">{paper.current_stage}</Badge>}
+            <Badge variant="light" color={progressColor}>
+              {progressLabel}
+            </Badge>
           </Group>
           <Text fw={600}>英文标题</Text>
-          <Text>{paper?.title_en || '—'}</Text>
+          <Text>{paper?.title_en || "—"}</Text>
           <Text fw={600}>中文摘要</Text>
-          <Text>{paper?.abstract_zh || '—'}</Text>
+          <Text>{paper?.abstract_zh || "—"}</Text>
           <Text fw={600}>英文摘要</Text>
-          <Text>{paper?.abstract_en || '—'}</Text>
+          <Text>{paper?.abstract_en || "—"}</Text>
           <SimpleGrid cols={{ base: 1, md: 2 }}>
             <Stack gap={4}>
               <Text fw={600}>中文关键词</Text>
@@ -297,9 +338,14 @@ export default function AuthorPaperDetailPage() {
               </Table.Thead>
               <Table.Tbody>
                 {paper.funds.map((fund) => (
-                  <Table.Tr key={fund.fund_id || `${fund.project_name}-${fund.project_number}`}>
-                    <Table.Td>{fund.project_name || '—'}</Table.Td>
-                    <Table.Td>{fund.project_number || '—'}</Table.Td>
+                  <Table.Tr
+                    key={
+                      fund.fund_id ||
+                      `${fund.project_name}-${fund.project_number}`
+                    }
+                  >
+                    <Table.Td>{fund.project_name || "—"}</Table.Td>
+                    <Table.Td>{fund.project_number || "—"}</Table.Td>
                   </Table.Tr>
                 ))}
               </Table.Tbody>
@@ -316,12 +362,20 @@ export default function AuthorPaperDetailPage() {
             ))}
           </Stack>
           <Text fw={600}>附件</Text>
-          <Button onClick={handleDownload} leftSection={<IconDownload size={16} />}>下载附件</Button>
+          <Button
+            onClick={handleDownload}
+            leftSection={<IconDownload size={16} />}
+          >
+            下载附件
+          </Button>
         </Stack>
       </Card>
 
       <Card withBorder shadow="sm" radius="md" pos="relative">
-        <LoadingOverlay visible={isLoading || isProgressLoading} overlayProps={{ blur: 2 }} />
+        <LoadingOverlay
+          visible={isLoading || isProgressLoading}
+          overlayProps={{ blur: 2 }}
+        />
         <Title order={4} mb="md">
           进度时间线
         </Title>
@@ -335,13 +389,13 @@ export default function AuthorPaperDetailPage() {
               <Timeline.Item
                 key={stage.key}
                 title={stage.label}
-                bullet={stage.status === 'finished' ? '✓' : undefined}
+                bullet={stage.status === "finished" ? "✓" : undefined}
                 color={stage.color}
               >
                 <Text size="sm">状态：{stage.statusText}</Text>
-                {stage.status === 'finished' && stage.time ? (
+                {stage.status === "finished" && stage.time ? (
                   <Text size="sm" c="dimmed">
-                    完成时间：{dayjs(stage.time).format('YYYY-MM-DD HH:mm')}
+                    完成时间：{dayjs(stage.time).format("YYYY-MM-DD HH:mm")}
                   </Text>
                 ) : (
                   <Text size="sm" c="dimmed">
@@ -374,7 +428,9 @@ export default function AuthorPaperDetailPage() {
             {uploadProgress > 0 && <Progress value={uploadProgress} />}
             <Group justify="flex-end">
               <Button
-                onClick={() => revisionFile && updateMutation.mutate(revisionFile)}
+                onClick={() =>
+                  revisionFile && updateMutation.mutate(revisionFile)
+                }
                 disabled={!revisionFile}
                 loading={updateMutation.isPending}
               >

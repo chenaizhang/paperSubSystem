@@ -47,3 +47,28 @@ export const PROGRESS_STATUS_FILTER_OPTIONS = [
   { label: "全部状态", value: "all" },
   ...RAW_STATUS_SEQUENCE.map(([value, label]) => ({ label, value })),
 ];
+
+const PROGRESS_STATUS_COLOR_MAP = {
+  Draft: "gray",
+  "Initial Reviewing": "yellow",
+  Reviewing: "indigo",
+  Revisioning: "orange",
+  "Second Reviewing": "violet",
+  "Final Review Completed": "teal",
+  "Final Reviewing": "grape",
+  Paying: "cyan",
+  Scheduling: "pink",
+  Published: "green",
+  Accept: "green",
+  Reject: "red",
+};
+
+const DEFAULT_PROGRESS_STATUS_COLOR = "gray";
+
+export function getProgressStatusColor(status) {
+  const normalized = normalizeProgressStatus(status);
+  if (!normalized) {
+    return DEFAULT_PROGRESS_STATUS_COLOR;
+  }
+  return PROGRESS_STATUS_COLOR_MAP[normalized] || DEFAULT_PROGRESS_STATUS_COLOR;
+}
