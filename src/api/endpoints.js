@@ -63,5 +63,6 @@ export const endpoints = {
   schedules: {
     base: "/api/schedules",
     detail: (id) => `/api/schedules/${id}`,
+    paperDetail: (paperId) => `/api/schedules/papers/${paperId}`,
   },
 };

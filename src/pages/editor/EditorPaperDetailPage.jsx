@@ -226,8 +226,33 @@ export default function EditorPaperDetailPage() {
     return trimmed.length > 0 ? trimmed.split(/\s+/).filter(Boolean) : [];
   }, [expertSearch]);
 
-  const normalizedProgress = normalizeProgressStatus(paper?.progress);
-  const isSchedulingStage = normalizedProgress === "Scheduling";
+  const normalizedProgress = normalizeProgressStatus(
+    paper?.progress ?? paper?.status
+  );
+  const canEditSchedule = normalizedProgress === "Scheduling";
+  const progressLabel = getProgressStatusLabel(
+    paper?.progress ?? paper?.status
+  );
+
+  const {
+    data: scheduleDetail,
+    isLoading: isScheduleLoading,
+    isError: isScheduleError,
+  } = useQuery({
+    queryKey: ["paper-schedule", paperId],
+    enabled: Boolean(paperId),
+    queryFn: async () => {
+      try {
+        const response = await api.get(endpoints.schedules.paperDetail(paperId));
+        return response.data ?? null;
+      } catch (error) {
+        if (error?.response?.status === 404) {
+          return null;
+        }
+        throw error;
+      }
+    },
+  });
 
   const integrityMutation = useMutation({
     mutationFn: async (integrity) => {
@@ -309,24 +334,59 @@ export default function EditorPaperDetailPage() {
     validate: zodResolver(scheduleSchema),
   });
 
+  useEffect(() => {
+    if (scheduleDetail === undefined) {
+      return;
+    }
+    const nextValues = scheduleDetail
+      ? {
+          issue_number: scheduleDetail.issue_number ?? "",
+          volume_number: scheduleDetail.volume_number ?? "",
+          page_number: scheduleDetail.page_number ?? "",
+        }
+      : {
+          issue_number: "",
+          volume_number: "",
+          page_number: "",
+        };
+    scheduleForm.setValues(nextValues);
+    scheduleForm.resetDirty(nextValues);
+  }, [scheduleDetail, scheduleForm]);
+
+  const scheduleId =
+    scheduleDetail?.schedule_id ?? scheduleDetail?.id ?? null;
+
   const scheduleMutation = useMutation({
     mutationFn: async (values) => {
-      const payload = {
-        paper_id: Number(paperId),
+      const basePayload = {
         issue_number: values.issue_number.trim(),
         volume_number: values.volume_number.trim(),
         page_number: values.page_number.trim(),
       };
-      const response = await api.post(endpoints.schedules.base, payload);
-      return response.data;
+      if (scheduleId) {
+        const response = await api.put(
+          endpoints.schedules.detail(scheduleId),
+          basePayload
+        );
+        return { action: "update", response: response.data };
+      }
+      const response = await api.post(endpoints.schedules.base, {
+        paper_id: Number(paperId),
+        ...basePayload,
+      });
+      return { action: "create", response: response.data };
     },
-    onSuccess: (data) => {
+    onSuccess: ({ action, response }) => {
       notifications.show({
-        title: "排期已创建",
-        message: data?.message || "最终期号、卷号、页码已保存",
+        title: action === "create" ? "排期已创建" : "排期已更新",
+        message:
+          response?.message ||
+          (action === "create"
+            ? "最终期号、卷号、页码已保存"
+            : "排期信息已更新"),
         color: "green",
       });
-      scheduleForm.reset();
+      queryClient.invalidateQueries({ queryKey: ["paper-schedule", paperId] });
       queryClient.invalidateQueries({ queryKey: ["schedules"] });
       queryClient.invalidateQueries({ queryKey: ["paper", paperId] });
     },
@@ -340,11 +400,11 @@ export default function EditorPaperDetailPage() {
         scheduleForm.setErrors(errors);
       }
       notifications.show({
-        title: "创建排期失败",
+        title: "保存排期失败",
         message:
           error?.response?.data?.message ||
           error?.friendlyMessage ||
-          "无法创建排期，请稍后再试",
+          "无法保存排期，请稍后再试",
         color: "red",
       });
     },
@@ -807,57 +867,6 @@ export default function EditorPaperDetailPage() {
         )}
       </Card>
 
-      {isSchedulingStage && (
-        <Card withBorder shadow="sm" pos="relative">
-          <Title order={4} mb="sm">
-            创建论文排期
-          </Title>
-          <Text size="sm" c="dimmed" mb="md">
-            填写期号、卷号与页码，确认稿件的最终出版信息。
-          </Text>
-          <form
-            onSubmit={scheduleForm.onSubmit((values) =>
-              scheduleMutation.mutate(values)
-            )}
-          >
-            <Stack gap="md">
-              <SimpleGrid cols={{ base: 1, md: 3 }}>
-                <TextInput
-                  label="期号"
-                  placeholder="例如：2024年第5期"
-                  withAsterisk
-                  disabled={scheduleMutation.isPending}
-                  {...scheduleForm.getInputProps("issue_number")}
-                />
-                <TextInput
-                  label="卷号"
-                  placeholder="例如：第12卷"
-                  withAsterisk
-                  disabled={scheduleMutation.isPending}
-                  {...scheduleForm.getInputProps("volume_number")}
-                />
-                <TextInput
-                  label="页码"
-                  placeholder="例如：123-135"
-                  withAsterisk
-                  disabled={scheduleMutation.isPending}
-                  {...scheduleForm.getInputProps("page_number")}
-                />
-              </SimpleGrid>
-              <Group justify="flex-end">
-                <Button
-                  type="submit"
-                  loading={scheduleMutation.isPending}
-                  disabled={scheduleMutation.isPending}
-                >
-                  保存排期
-                </Button>
-              </Group>
-            </Stack>
-          </form>
-        </Card>
-      )}
-
       <Card withBorder shadow="sm">
         <Group justify="space-between" mb="md">
           <Title order={4}>审稿意见</Title>
@@ -934,6 +943,88 @@ export default function EditorPaperDetailPage() {
           </Table.Tbody>
         </Table>
         {(comments || []).length === 0 && <Text mt="md">暂无审稿意见。</Text>}
+      </Card>
+
+      <Card withBorder shadow="sm" pos="relative">
+        <LoadingOverlay
+          visible={isScheduleLoading || scheduleMutation.isPending}
+          overlayProps={{ blur: 2 }}
+        />
+        <Title order={4} mb="sm">
+          论文排期
+        </Title>
+        <Text
+          size="sm"
+          c="dimmed"
+          mb={canEditSchedule ? "md" : "xs"}
+        >
+          填写期号、卷号与页码，确认稿件的最终出版信息。
+        </Text>
+        {!canEditSchedule && (
+          <Text size="sm" c="dimmed" mb="md">
+            当前进度为{progressLabel || "—"}，仅在“排期中”阶段可以编辑排期信息。
+          </Text>
+        )}
+        {isScheduleError && (
+          <Text size="sm" c="red" mb="md">
+            无法加载排期信息，请稍后再试。
+          </Text>
+        )}
+        <form
+          onSubmit={scheduleForm.onSubmit((values) =>
+            scheduleMutation.mutate(values)
+          )}
+        >
+          <Stack gap="md">
+            <SimpleGrid cols={{ base: 1, md: 3 }}>
+              <TextInput
+                label="期号"
+                placeholder="例如：2024年第5期"
+                withAsterisk
+                disabled={
+                  !canEditSchedule || scheduleMutation.isPending || isScheduleLoading
+                }
+                {...scheduleForm.getInputProps("issue_number")}
+              />
+              <TextInput
+                label="卷号"
+                placeholder="例如：第12卷"
+                withAsterisk
+                disabled={
+                  !canEditSchedule || scheduleMutation.isPending || isScheduleLoading
+                }
+                {...scheduleForm.getInputProps("volume_number")}
+              />
+              <TextInput
+                label="页码"
+                placeholder="例如：123-135"
+                withAsterisk
+                disabled={
+                  !canEditSchedule || scheduleMutation.isPending || isScheduleLoading
+                }
+                {...scheduleForm.getInputProps("page_number")}
+              />
+            </SimpleGrid>
+            <Group justify="space-between" align="center">
+              {scheduleId ? (
+                <Text size="xs" c="dimmed">
+                  当前排期ID：{scheduleId}
+                </Text>
+              ) : (
+                <div />
+              )}
+              <Button
+                type="submit"
+                loading={scheduleMutation.isPending}
+                disabled={
+                  !canEditSchedule || scheduleMutation.isPending || isScheduleLoading
+                }
+              >
+                {scheduleId ? "更新排期" : "保存排期"}
+              </Button>
+            </Group>
+          </Stack>
+        </form>
       </Card>
 
       <Modal
