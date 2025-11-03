@@ -78,6 +78,9 @@ export default function NotificationsPage() {
       queryClient.invalidateQueries({
         queryKey: ["notifications", "unread-count"],
       });
+      queryClient.invalidateQueries({
+        queryKey: ["unread-indicator"],
+      });
     },
   });
 
@@ -433,7 +436,8 @@ export default function NotificationsPage() {
                   <Badge color={item.is_read ? "gray" : "blue"}>
                     {item.is_read ? "已读" : "未读"}
                   </Badge>
-                  {item.deadline && (
+                  {item.deadline &&
+                    item.notification_type !== "Rejection Notification" && (
                     <Badge color="red" variant="light">
                       截止：{dayjs(item.deadline).format("YYYY-MM-DD HH:mm")}
                     </Badge>
@@ -477,7 +481,9 @@ export default function NotificationsPage() {
               </Text>
               {dayjs(selectedNotification.sent_at).format("YYYY-MM-DD HH:mm")}
             </Text>
-            {selectedNotification.deadline && (
+            {selectedNotification.deadline &&
+              selectedNotification.notification_type !==
+                "Rejection Notification" && (
               <Text>
                 <Text span fw={500}>
                   截止时间：
