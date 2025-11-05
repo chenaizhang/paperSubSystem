@@ -34,6 +34,7 @@ export const endpoints = {
     download: (id) => `/api/papers/${id}/download`,
     integrity: (id) => `/api/papers/${id}/integrity`,
     progress: (id) => `/api/papers/${id}/progress`,
+    status: (id) => `/api/papers/${id}/status`,
     progressList: "/api/papers/progress",
   },
   reviews: {

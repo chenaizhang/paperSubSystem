@@ -157,6 +157,17 @@ export default function EditorPaperDetailPage() {
       return response.data;
     },
   });
+  const {
+    data: paperStatus,
+    isLoading: isStatusLoading,
+  } = useQuery({
+    queryKey: ["paper-status", paperId],
+    enabled: Boolean(paperId),
+    queryFn: async () => {
+      const response = await api.get(endpoints.papers.status(paperId));
+      return response.data;
+    },
+  });
 
   const { data: comments } = useQuery({
     queryKey: ["review-comments", paperId],
@@ -440,6 +451,20 @@ export default function EditorPaperDetailPage() {
     },
     validate: zodResolver(notificationSchema),
   });
+  const isStatusRead = useMemo(() => {
+    const raw = paperStatus?.status_read;
+    if (typeof raw === "boolean") {
+      return raw;
+    }
+    if (typeof raw === "number") {
+      return raw === 1;
+    }
+    if (typeof raw === "string") {
+      const normalized = raw.trim().toLowerCase();
+      return normalized === "1" || normalized === "true";
+    }
+    return false;
+  }, [paperStatus?.status_read]);
 
   useEffect(() => {
     if (
@@ -460,6 +485,12 @@ export default function EditorPaperDetailPage() {
     notificationForm.values.amount,
     notificationForm.values.deadline,
   ]);
+  useEffect(() => {
+    if (isStatusRead && opened) {
+      notificationForm.reset();
+      close();
+    }
+  }, [isStatusRead, opened, close, notificationForm]);
 
   const notificationMutation = useMutation({
     mutationFn: async (values) => {
@@ -497,6 +528,7 @@ export default function EditorPaperDetailPage() {
       });
       notificationForm.reset();
       close();
+      queryClient.invalidateQueries({ queryKey: ["paper-status", paperId] });
     },
     onError: (error) => {
       notifications.show({
@@ -908,16 +940,9 @@ export default function EditorPaperDetailPage() {
       </Card>
 
       <Card withBorder shadow="sm">
-        <Group justify="space-between" mb="md">
-          <Title order={4}>审稿意见</Title>
-          <Button
-            variant="light"
-            onClick={open}
-            leftSection={<IconSend size={16} />}
-          >
-            发送通知
-          </Button>
-        </Group>
+        <Title order={4} mb="md">
+          审稿意见
+        </Title>
         {aggregatedConclusion && (
           <Stack gap="xs" mb="md">
             <Text fw={600}>结论投票结果</Text>
@@ -983,6 +1008,38 @@ export default function EditorPaperDetailPage() {
           </Table.Tbody>
         </Table>
         {(comments || []).length === 0 && <Text mt="md">暂无审稿意见。</Text>}
+      </Card>
+
+      <Card withBorder shadow="sm" pos="relative">
+        <LoadingOverlay
+          visible={notificationMutation.isPending || isStatusLoading}
+          overlayProps={{ blur: 2 }}
+        />
+        <Stack gap="sm">
+          <Group justify="space-between" align="flex-start">
+            <div>
+              <Title order={4}>发送作者通知</Title>
+              <Text size="sm" c="dimmed">
+                选择通知类型并确认信息后发送给作者。
+              </Text>
+              {isStatusRead && (
+                <Text size="xs" c="dimmed">
+                  当前通知已标记为已读，无法继续发送。
+                </Text>
+              )}
+            </div>
+            <Button
+              variant="light"
+              onClick={open}
+              leftSection={<IconSend size={16} />}
+              disabled={
+                notificationMutation.isPending || isStatusLoading || isStatusRead
+              }
+            >
+              发送通知
+            </Button>
+          </Group>
+        </Stack>
       </Card>
 
       <Card withBorder shadow="sm" pos="relative">
@@ -1081,9 +1138,12 @@ export default function EditorPaperDetailPage() {
         size="lg"
       >
         <form
-          onSubmit={notificationForm.onSubmit((values) =>
-            notificationMutation.mutate(values)
-          )}
+          onSubmit={notificationForm.onSubmit((values) => {
+            if (isStatusRead || isStatusLoading) {
+              return;
+            }
+            notificationMutation.mutate(values);
+          })}
         >
           <Stack gap="md">
             <Select
@@ -1098,6 +1158,7 @@ export default function EditorPaperDetailPage() {
               }
               placeholder="请选择要发送的通知类型"
               error={notificationForm.errors.notification_type}
+              disabled={isStatusRead || isStatusLoading}
             />
             {(notificationForm.values.notification_type ===
               "Review Assignment" ||
@@ -1112,6 +1173,7 @@ export default function EditorPaperDetailPage() {
                   notificationForm.setFieldValue("deadline", value)
                 }
                 error={notificationForm.errors.deadline}
+                disabled={isStatusRead || isStatusLoading}
               />
             )}
             {notificationForm.values.notification_type ===
@@ -1130,6 +1192,7 @@ export default function EditorPaperDetailPage() {
                 }
                 error={notificationForm.errors.amount}
                 hideControls
+                disabled={isStatusRead || isStatusLoading}
               />
             )}
             <Group justify="flex-end">
@@ -1142,7 +1205,11 @@ export default function EditorPaperDetailPage() {
               >
                 取消
               </Button>
-              <Button type="submit" loading={notificationMutation.isPending}>
+              <Button
+                type="submit"
+                loading={notificationMutation.isPending}
+                disabled={isStatusRead || isStatusLoading}
+              >
                 发送
               </Button>
             </Group>
